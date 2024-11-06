@@ -8,7 +8,8 @@ MyShader::MyShader() :
     context(),
     instance(initializeInstance()),
     debugMessenger(initializeDebugMessenger()),
-    physicalDevice(initializePhysicalDevice())
+    physicalDevice(initializePhysicalDevice()),
+    device(initializeDevice())
 {
 }
 
@@ -83,7 +84,7 @@ vk::raii::Instance MyShader::initializeInstance() const
 
     try
     {
-        return vk::raii::Instance(context, createInfo);
+        return context.createInstance(createInfo);
     }
     catch (const vk::SystemError& error)
     {
@@ -121,6 +122,37 @@ vk::raii::PhysicalDevice MyShader::initializePhysicalDevice() const
     }
 
     throw std::runtime_error("Failed to find a suitable GPU.");
+}
+
+vk::raii::Device MyShader::initializeDevice() const
+{
+    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    constexpr float queuePriority = 1.0f;
+
+    vk::DeviceQueueCreateInfo queueCreateInfo{
+        .queueFamilyIndex = indices.graphicsFamily.value(),
+        .queueCount = 1,
+        .pQueuePriorities = &queuePriority
+    };
+
+    vk::PhysicalDeviceFeatures physicalDeviceFeatures{};
+
+    const vk::DeviceCreateInfo createInfo{
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queueCreateInfo,
+        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+        .ppEnabledExtensionNames = deviceExtensions.data(),
+        .pEnabledFeatures = &physicalDeviceFeatures
+    };
+
+    try
+    {
+        return physicalDevice.createDevice(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create Vulkan device with error code: " + std::to_string(error.code().value()));
+    }
 }
 
 void MyShader::drawFrame()

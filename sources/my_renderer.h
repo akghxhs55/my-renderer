@@ -29,19 +29,21 @@ private:
 
     static constexpr auto ApplicationName = R"(My Shader)";
     static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 0, 0, 0);
-    static constexpr auto EngineName = R"(No Engine)";
-    static constexpr uint32_t EngineVersion = vk::makeApiVersion(0, 0, 0, 0);
     static constexpr uint32_t Width = 800;
     static constexpr uint32_t Height = 600;
 
+    static constexpr auto EngineName = R"(No Engine)";
+    static constexpr uint32_t EngineVersion = vk::makeApiVersion(0, 0, 0, 0);
 #ifdef NDEBUG
     static constexpr bool enableValidationLayers = false;
 #else
     static constexpr bool enableValidationLayers = true;
 #endif
-
     static constexpr std::array<const char*, 1> validationLayers = {
         "VK_LAYER_KHRONOS_validation"
+    };
+    static constexpr std::array<const char*, 1> deviceExtensions = {
+        "VK_KHR_portability_subset"
     };
 
     WindowPtr window;
@@ -49,11 +51,13 @@ private:
     vk::raii::Instance instance;
     std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
     vk::raii::PhysicalDevice physicalDevice;
+    vk::raii::Device device;
 
     static WindowPtr initializeWindow();
     vk::raii::Instance initializeInstance() const;
     vk::raii::DebugUtilsMessengerEXT initializeDebugMessenger() const;
     vk::raii::PhysicalDevice initializePhysicalDevice() const;
+    vk::raii::Device initializeDevice() const;
 
     void drawFrame();
 

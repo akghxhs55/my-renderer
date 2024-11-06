@@ -1,6 +1,6 @@
 - [x] Create Instance
 - [x] Create Debug Utils Messenger
-- [ ] Create Device and Queues
+- [x] Create Device and Queues
 - [ ] Create Surface
 - [ ] Create Swapchain and Image Views
 - [ ] Create Render Pass
