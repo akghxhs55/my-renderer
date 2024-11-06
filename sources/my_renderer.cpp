@@ -7,7 +7,8 @@ MyShader::MyShader() :
     window(initializeWindow()),
     context(),
     instance(initializeInstance()),
-    debugMessenger(initializeDebugMessenger())
+    debugMessenger(initializeDebugMessenger()),
+    physicalDevice(initializePhysicalDevice())
 {
 }
 
@@ -107,6 +108,21 @@ vk::raii::DebugUtilsMessengerEXT MyShader::initializeDebugMessenger() const
     }
 }
 
+vk::raii::PhysicalDevice MyShader::initializePhysicalDevice() const
+{
+    const std::vector<vk::raii::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
+
+    for (const vk::raii::PhysicalDevice& physicalDevice : physicalDevices)
+    {
+        if (isPhysicalDeviceSuitable(physicalDevice))
+        {
+            return physicalDevice;
+        }
+    }
+
+    throw std::runtime_error("Failed to find a suitable GPU.");
+}
+
 void MyShader::drawFrame()
 {
 
@@ -155,4 +171,12 @@ vk::Bool32 MyShader::debugCallback(
 {
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
     return VK_FALSE;
+}
+
+bool MyShader::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice)
+{
+    const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
+    const vk::PhysicalDeviceFeatures features = physicalDevice.getFeatures();
+
+    return features.samplerAnisotropy;
 }

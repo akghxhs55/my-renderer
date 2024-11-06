@@ -20,7 +20,6 @@ private:
 
     static constexpr auto ApplicationName = R"(My Shader)";
     static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 1, 0, 0);
-
     static constexpr uint32_t Width = 800;
     static constexpr uint32_t Height = 600;
 
@@ -38,10 +37,13 @@ private:
     vk::raii::Context context;
     vk::raii::Instance instance;
     std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
+    vk::raii::PhysicalDevice physicalDevice;
 
     static WindowPtr initializeWindow();
     vk::raii::Instance initializeInstance() const;
     vk::raii::DebugUtilsMessengerEXT initializeDebugMessenger() const;
+    vk::raii::PhysicalDevice initializePhysicalDevice() const;
+
     void drawFrame();
 
     static std::vector<const char*> getRequiredExtensionNames();
@@ -51,6 +53,7 @@ private:
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);
+    static bool isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice);
 };
 
 
