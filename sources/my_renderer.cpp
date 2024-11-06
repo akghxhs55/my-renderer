@@ -55,8 +55,8 @@ vk::raii::Instance MyShader::initializeInstance() const
     vk::ApplicationInfo applicationInfo{
         .pApplicationName = ApplicationName,
         .applicationVersion = ApplicationVersion,
-        .pEngineName = "No Engine",
-        .engineVersion = vk::makeApiVersion(0, 1, 0, 0),
+        .pEngineName = EngineName,
+        .engineVersion = EngineVersion,
         .apiVersion = vk::ApiVersion13
     };
 

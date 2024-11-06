@@ -19,7 +19,9 @@ private:
     using WindowPtr = std::unique_ptr<GLFWwindow, decltype(&glfwDestroyWindow)>;
 
     static constexpr auto ApplicationName = R"(My Shader)";
-    static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 1, 0, 0);
+    static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 0, 0, 0);
+    static constexpr auto EngineName = R"(No Engine)";
+    static constexpr uint32_t EngineVersion = vk::makeApiVersion(0, 0, 0, 0);
     static constexpr uint32_t Width = 800;
     static constexpr uint32_t Height = 600;
 
