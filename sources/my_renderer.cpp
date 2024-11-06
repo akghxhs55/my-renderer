@@ -175,8 +175,27 @@ vk::Bool32 MyShader::debugCallback(
 
 bool MyShader::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice)
 {
+    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+
     const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
     const vk::PhysicalDeviceFeatures features = physicalDevice.getFeatures();
 
-    return features.samplerAnisotropy;
+    return indices.isComplete() and
+           features.samplerAnisotropy;
+}
+
+MyShader::QueueFamilyIndices MyShader::findQueueFamilies(const vk::raii::PhysicalDevice &physicalDevice)
+{
+    QueueFamilyIndices indices;
+
+    const std::vector<vk::QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
+    for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+    {
+        if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
+        {
+            indices.graphicsFamily = i;
+        }
+    }
+
+    return indices;
 }

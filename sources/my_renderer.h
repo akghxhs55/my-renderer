@@ -17,6 +17,15 @@ public:
 
 private:
     using WindowPtr = std::unique_ptr<GLFWwindow, decltype(&glfwDestroyWindow)>;
+    struct QueueFamilyIndices
+    {
+        std::optional<uint32_t> graphicsFamily;
+
+        bool isComplete() const
+        {
+            return graphicsFamily.has_value();
+        }
+    };
 
     static constexpr auto ApplicationName = R"(My Shader)";
     static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 0, 0, 0);
@@ -56,6 +65,7 @@ private:
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);
     static bool isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice);
+    static QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice);
 };
 
 
