@@ -44,20 +44,11 @@ MyShader::WindowPtr MyShader::initializeWindow()
 vk::raii::Instance MyShader::initializeInstance() const
 {
     void* pNext = nullptr;
+
+    vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo = getDebugUtilsMessengerCreateInfo();
     if constexpr (enableValidationLayers)
     {
-        const vk::DebugUtilsMessengerCreateInfoEXT createInfo{
-            .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-            .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-            .pfnUserCallback = debugCallback,
-            .pUserData = nullptr
-        };
-
-        pNext = const_cast<vk::DebugUtilsMessengerCreateInfoEXT*>(&createInfo);
+        pNext = &debugUtilsMessengerCreateInfo;
     }
 
     vk::ApplicationInfo applicationInfo{
@@ -106,20 +97,9 @@ vk::raii::DebugUtilsMessengerEXT MyShader::initializeDebugMessenger() const
         return nullptr;
     }
 
-    const vk::DebugUtilsMessengerCreateInfoEXT createInfo{
-        .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-        .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-        .pfnUserCallback = debugCallback,
-        .pUserData = nullptr
-    };
-
     try
     {
-        return vk::raii::DebugUtilsMessengerEXT(instance, createInfo);
+        return vk::raii::DebugUtilsMessengerEXT(instance, getDebugUtilsMessengerCreateInfo());
     }
     catch (const vk::SystemError& error)
     {
@@ -151,6 +131,20 @@ std::vector<const char*> MyShader::getRequiredExtensionNames()
     extensionNames.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
 
     return extensionNames;
+}
+
+vk::DebugUtilsMessengerCreateInfoEXT MyShader::getDebugUtilsMessengerCreateInfo()
+{
+    return vk::DebugUtilsMessengerCreateInfoEXT{
+        .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+        .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+        .pfnUserCallback = debugCallback,
+        .pUserData = nullptr
+    };
 }
 
 vk::Bool32 MyShader::debugCallback(

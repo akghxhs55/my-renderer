@@ -45,6 +45,7 @@ private:
     void drawFrame();
 
     static std::vector<const char*> getRequiredExtensionNames();
+    static vk::DebugUtilsMessengerCreateInfoEXT getDebugUtilsMessengerCreateInfo();
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
