@@ -3,7 +3,7 @@
 #include <iostream>
 
 
-MyShader::MyShader() :
+MyRenderer::MyRenderer() :
     window(initializeWindow()),
     context(),
     instance(initializeInstance()),
@@ -13,12 +13,12 @@ MyShader::MyShader() :
 {
 }
 
-MyShader::~MyShader()
+MyRenderer::~MyRenderer()
 {
     glfwTerminate();
 }
 
-void MyShader::run()
+void MyRenderer::run()
 {
     while (!glfwWindowShouldClose(window.get()))
     {
@@ -27,7 +27,7 @@ void MyShader::run()
     }
 }
 
-MyShader::WindowPtr MyShader::initializeWindow()
+MyRenderer::WindowPtr MyRenderer::initializeWindow()
 {
     glfwInit();
 
@@ -43,7 +43,7 @@ MyShader::WindowPtr MyShader::initializeWindow()
     return WindowPtr(window, glfwDestroyWindow);
 }
 
-vk::raii::Instance MyShader::initializeInstance() const
+vk::raii::Instance MyRenderer::initializeInstance() const
 {
     void* pNext = nullptr;
 
@@ -92,7 +92,7 @@ vk::raii::Instance MyShader::initializeInstance() const
     }
 }
 
-vk::raii::DebugUtilsMessengerEXT MyShader::initializeDebugMessenger() const
+vk::raii::DebugUtilsMessengerEXT MyRenderer::initializeDebugMessenger() const
 {
     if constexpr (!enableValidationLayers)
     {
@@ -109,7 +109,7 @@ vk::raii::DebugUtilsMessengerEXT MyShader::initializeDebugMessenger() const
     }
 }
 
-vk::raii::PhysicalDevice MyShader::initializePhysicalDevice() const
+vk::raii::PhysicalDevice MyRenderer::initializePhysicalDevice() const
 {
     const std::vector<vk::raii::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
 
@@ -124,7 +124,7 @@ vk::raii::PhysicalDevice MyShader::initializePhysicalDevice() const
     throw std::runtime_error("Failed to find a suitable GPU.");
 }
 
-vk::raii::Device MyShader::initializeDevice() const
+vk::raii::Device MyRenderer::initializeDevice() const
 {
     const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
     constexpr float queuePriority = 1.0f;
@@ -155,12 +155,12 @@ vk::raii::Device MyShader::initializeDevice() const
     }
 }
 
-void MyShader::drawFrame()
+void MyRenderer::drawFrame()
 {
 
 }
 
-std::vector<const char*> MyShader::getRequiredExtensionNames()
+std::vector<const char*> MyRenderer::getRequiredExtensionNames()
 {
     std::vector<const char*> extensionNames;
 
@@ -181,7 +181,7 @@ std::vector<const char*> MyShader::getRequiredExtensionNames()
     return extensionNames;
 }
 
-vk::DebugUtilsMessengerCreateInfoEXT MyShader::getDebugUtilsMessengerCreateInfo()
+vk::DebugUtilsMessengerCreateInfoEXT MyRenderer::getDebugUtilsMessengerCreateInfo()
 {
     return vk::DebugUtilsMessengerCreateInfoEXT{
         .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
@@ -195,7 +195,7 @@ vk::DebugUtilsMessengerCreateInfoEXT MyShader::getDebugUtilsMessengerCreateInfo(
     };
 }
 
-vk::Bool32 MyShader::debugCallback(
+vk::Bool32 MyRenderer::debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
@@ -205,7 +205,7 @@ vk::Bool32 MyShader::debugCallback(
     return VK_FALSE;
 }
 
-bool MyShader::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice)
+bool MyRenderer::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice)
 {
     const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
@@ -216,7 +216,7 @@ bool MyShader::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physical
            features.samplerAnisotropy;
 }
 
-MyShader::QueueFamilyIndices MyShader::findQueueFamilies(const vk::raii::PhysicalDevice &physicalDevice)
+MyRenderer::QueueFamilyIndices MyRenderer::findQueueFamilies(const vk::raii::PhysicalDevice &physicalDevice)
 {
     QueueFamilyIndices indices;
 

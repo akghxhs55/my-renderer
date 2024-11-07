@@ -9,10 +9,10 @@
 #include <vulkan/vulkan_raii.hpp>
 
 
-class MyShader {
+class MyRenderer {
 public:
-    MyShader();
-    ~MyShader();
+    MyRenderer();
+    ~MyRenderer();
     void run();
 
 private:

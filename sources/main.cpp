@@ -7,7 +7,7 @@ int main()
 {
     try
     {
-        MyShader app;
+        MyRenderer app;
         app.run();
     }
     catch (const std::exception& exception)
