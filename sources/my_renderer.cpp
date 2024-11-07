@@ -9,7 +9,8 @@ MyRenderer::MyRenderer() :
     instance(initializeInstance()),
     debugMessenger(initializeDebugMessenger()),
     physicalDevice(initializePhysicalDevice()),
-    device(initializeDevice())
+    device(initializeDevice()),
+    graphicsQueue(initializeGraphicsQueue())
 {
 }
 
@@ -155,9 +156,15 @@ vk::raii::Device MyRenderer::initializeDevice() const
     }
 }
 
+vk::raii::Queue MyRenderer::initializeGraphicsQueue() const
+{
+    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+
+    return device.getQueue(indices.graphicsFamily.value(), 0);
+}
+
 void MyRenderer::drawFrame()
 {
-
 }
 
 std::vector<const char*> MyRenderer::getRequiredExtensionNames()

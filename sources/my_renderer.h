@@ -52,12 +52,14 @@ private:
     std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
     vk::raii::PhysicalDevice physicalDevice;
     vk::raii::Device device;
+    vk::raii::Queue graphicsQueue;
 
     static WindowPtr initializeWindow();
     vk::raii::Instance initializeInstance() const;
     vk::raii::DebugUtilsMessengerEXT initializeDebugMessenger() const;
     vk::raii::PhysicalDevice initializePhysicalDevice() const;
     vk::raii::Device initializeDevice() const;
+    vk::raii::Queue initializeGraphicsQueue() const;
 
     void drawFrame();
 
