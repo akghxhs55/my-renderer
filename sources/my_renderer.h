@@ -66,6 +66,7 @@ private:
     std::vector<vk::Image> swapchainImages;
     vk::Format swapchainImageFormat;
     vk::Extent2D swapchainExtent;
+    std::vector<vk::raii::ImageView> swapchainImageViews;
 
     static WindowPtr initializeWindow();
     vk::raii::Instance initializeInstance() const;
@@ -78,6 +79,7 @@ private:
     std::vector<vk::Image> initializeSwapchainImages() const;
     vk::Format initializeSwapchainImageFormat() const;
     vk::Extent2D initializeSwapchainExtent() const;
+    std::vector<vk::raii::ImageView> initializeSwapchainImageViews() const;
 
     void drawFrame();
 

@@ -16,7 +16,8 @@ MyRenderer::MyRenderer() :
     swapchain(initializeSwapchain()),
     swapchainImages(initializeSwapchainImages()),
     swapchainImageFormat(initializeSwapchainImageFormat()),
-    swapchainExtent(initializeSwapchainExtent())
+    swapchainExtent(initializeSwapchainExtent()),
+    swapchainImageViews(initializeSwapchainImageViews())
 {
 }
 
@@ -252,6 +253,44 @@ vk::Extent2D MyRenderer::initializeSwapchainExtent() const
 {
     const SwapChainSupportDetails swapchainSupportDetails = querySwapChainSupport(physicalDevice, surface);
     return chooseSwapExtent(swapchainSupportDetails.capabilities, window.get());
+}
+
+std::vector<vk::raii::ImageView> MyRenderer::initializeSwapchainImageViews() const
+{
+    std::vector<vk::raii::ImageView> imageViews;
+
+    for (const auto swapchainImage : swapchainImages)
+    {
+        const vk::ImageViewCreateInfo createInfo{
+            .image = swapchainImage,
+            .viewType = vk::ImageViewType::e2D,
+            .format = swapchainImageFormat,
+            .components = {
+                .r = vk::ComponentSwizzle::eIdentity,
+                .g = vk::ComponentSwizzle::eIdentity,
+                .b = vk::ComponentSwizzle::eIdentity,
+                .a = vk::ComponentSwizzle::eIdentity
+            },
+            .subresourceRange = {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            }
+        };
+
+        try
+        {
+            imageViews.emplace_back(device.createImageView(createInfo));
+        }
+        catch (const vk::SystemError& error)
+        {
+            throw std::runtime_error("Failed to create image view with error code: " + std::to_string(error.code().value()));
+        }
+    }
+
+    return imageViews;
 }
 
 void MyRenderer::drawFrame()
