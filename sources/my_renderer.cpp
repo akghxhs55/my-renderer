@@ -1,6 +1,7 @@
 #include "my_renderer.h"
 
 #include <iostream>
+#include <set>
 
 
 MyRenderer::MyRenderer() :
@@ -8,9 +9,14 @@ MyRenderer::MyRenderer() :
     context(),
     instance(initializeInstance()),
     debugMessenger(initializeDebugMessenger()),
+    surface(initializeSurface()),
     physicalDevice(initializePhysicalDevice()),
     device(initializeDevice()),
-    graphicsQueue(initializeGraphicsQueue())
+    presentQueue(initializePresentQueue()),
+    swapchain(initializeSwapchain()),
+    swapchainImages(initializeSwapchainImages()),
+    swapchainImageFormat(initializeSwapchainImageFormat()),
+    swapchainExtent(initializeSwapchainExtent())
 {
 }
 
@@ -110,13 +116,28 @@ vk::raii::DebugUtilsMessengerEXT MyRenderer::initializeDebugMessenger() const
     }
 }
 
+vk::raii::SurfaceKHR MyRenderer::initializeSurface() const
+{
+    VkSurfaceKHR _surface;
+    if (const VkResult result = glfwCreateWindowSurface(static_cast<vk::Instance>(instance), window.get(), nullptr, &_surface);
+        result == VK_SUCCESS)
+    {
+        return vk::raii::SurfaceKHR(instance, _surface);
+    }
+    else
+    {
+        throw std::runtime_error("Failed to create window surface with error code: " + std::to_string(result));
+    }
+
+}
+
 vk::raii::PhysicalDevice MyRenderer::initializePhysicalDevice() const
 {
     const std::vector<vk::raii::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
 
     for (const vk::raii::PhysicalDevice& physicalDevice : physicalDevices)
     {
-        if (isPhysicalDeviceSuitable(physicalDevice))
+        if (isPhysicalDeviceSuitable(physicalDevice, surface))
         {
             return physicalDevice;
         }
@@ -127,7 +148,7 @@ vk::raii::PhysicalDevice MyRenderer::initializePhysicalDevice() const
 
 vk::raii::Device MyRenderer::initializeDevice() const
 {
-    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
     constexpr float queuePriority = 1.0f;
 
     vk::DeviceQueueCreateInfo queueCreateInfo{
@@ -156,11 +177,81 @@ vk::raii::Device MyRenderer::initializeDevice() const
     }
 }
 
-vk::raii::Queue MyRenderer::initializeGraphicsQueue() const
+vk::raii::Queue MyRenderer::initializePresentQueue() const
 {
-    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
 
-    return device.getQueue(indices.graphicsFamily.value(), 0);
+    return device.getQueue(indices.presentFamily.value(), 0);
+}
+
+vk::raii::SwapchainKHR MyRenderer::initializeSwapchain() const
+{
+    const SwapChainSupportDetails swapchainSupportDetails = querySwapChainSupport(physicalDevice, surface);
+
+    const vk::SurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapchainSupportDetails.formats);
+    const vk::PresentModeKHR presentMode = chooseSwapPresentMode(swapchainSupportDetails.presentModes);
+    const vk::Extent2D extent = chooseSwapExtent(swapchainSupportDetails.capabilities, window.get());
+
+    uint32_t imageCount = swapchainSupportDetails.capabilities.minImageCount + 1;
+    if (swapchainSupportDetails.capabilities.maxImageCount > 0 and
+        swapchainSupportDetails.capabilities.maxImageCount < imageCount)
+    {
+        imageCount = swapchainSupportDetails.capabilities.maxImageCount;
+    }
+
+    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+
+    std::vector<uint32_t> queueFamilyIndices;
+    vk::SharingMode imageSharingMode = vk::SharingMode::eExclusive;
+    if (indices.graphicsFamily.value() != indices.presentFamily.value())
+    {
+        imageSharingMode = vk::SharingMode::eConcurrent;
+        queueFamilyIndices = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+    }
+
+    const vk::SwapchainCreateInfoKHR createInfo{
+        .surface = surface,
+        .minImageCount = imageCount,
+        .imageFormat = surfaceFormat.format,
+        .imageColorSpace = surfaceFormat.colorSpace,
+        .imageExtent = extent,
+        .imageArrayLayers = 1,
+        .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+        .imageSharingMode = imageSharingMode,
+        .queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size()),
+        .pQueueFamilyIndices = queueFamilyIndices.data(),
+        .preTransform = swapchainSupportDetails.capabilities.currentTransform,
+        .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+        .presentMode = presentMode,
+        .clipped = vk::True,
+        .oldSwapchain = nullptr
+    };
+
+    try
+    {
+        return device.createSwapchainKHR(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create Vulkan swapchain with error code: " + std::to_string(error.code().value()));
+    }
+}
+
+std::vector<vk::Image> MyRenderer::initializeSwapchainImages() const
+{
+    return swapchain.getImages();
+}
+
+vk::Format MyRenderer::initializeSwapchainImageFormat() const
+{
+    const SwapChainSupportDetails swapchainSupportDetails = querySwapChainSupport(physicalDevice, surface);
+    return chooseSwapSurfaceFormat(swapchainSupportDetails.formats).format;
+}
+
+vk::Extent2D MyRenderer::initializeSwapchainExtent() const
+{
+    const SwapChainSupportDetails swapchainSupportDetails = querySwapChainSupport(physicalDevice, surface);
+    return chooseSwapExtent(swapchainSupportDetails.capabilities, window.get());
 }
 
 void MyRenderer::drawFrame()
@@ -212,18 +303,42 @@ vk::Bool32 MyRenderer::debugCallback(
     return VK_FALSE;
 }
 
-bool MyRenderer::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice)
+bool MyRenderer::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice, const vk::raii::SurfaceKHR &surface)
 {
-    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
 
-    const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
-    const vk::PhysicalDeviceFeatures features = physicalDevice.getFeatures();
+    const bool extensionSupported = checkDeviceExtensionSupport(physicalDevice);
+
+    bool swapChainAdequate = false;
+    if (extensionSupported)
+    {
+        const SwapChainSupportDetails swapchainDetails = querySwapChainSupport(physicalDevice, surface);
+        swapChainAdequate = !swapchainDetails.formats.empty() and
+                            !swapchainDetails.presentModes.empty();
+    }
+
+    // const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
+    // const vk::PhysicalDeviceFeatures features = physicalDevice.getFeatures();
 
     return indices.isComplete() and
-           features.samplerAnisotropy;
+           extensionSupported and
+           swapChainAdequate;
 }
 
-MyRenderer::QueueFamilyIndices MyRenderer::findQueueFamilies(const vk::raii::PhysicalDevice &physicalDevice)
+bool MyRenderer::checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice)
+{
+    const std::vector<vk::ExtensionProperties> availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
+    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+    for (const vk::ExtensionProperties& extension : availableExtensions)
+    {
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
+}
+
+MyRenderer::QueueFamilyIndices MyRenderer::findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice, const vk::raii::SurfaceKHR& surface)
 {
     QueueFamilyIndices indices;
 
@@ -234,7 +349,75 @@ MyRenderer::QueueFamilyIndices MyRenderer::findQueueFamilies(const vk::raii::Phy
         {
             indices.graphicsFamily = i;
         }
+
+        if (physicalDevice.getSurfaceSupportKHR(i, surface))
+        {
+            indices.presentFamily = i;
+        }
+
+        if (indices.isComplete())
+        {
+            break;
+        }
     }
 
     return indices;
+}
+
+MyRenderer::SwapChainSupportDetails MyRenderer::querySwapChainSupport(const vk::raii::PhysicalDevice& device,
+    const vk::raii::SurfaceKHR& surface)
+{
+    return SwapChainSupportDetails{
+        .capabilities = device.getSurfaceCapabilitiesKHR(surface),
+        .formats = device.getSurfaceFormatsKHR(surface),
+        .presentModes = device.getSurfacePresentModesKHR(surface)
+    };
+}
+
+vk::SurfaceFormatKHR MyRenderer::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
+{
+    for (const vk::SurfaceFormatKHR& availableFormat : availableFormats)
+    {
+        if (availableFormat.format == vk::Format::eB8G8R8A8Srgb and
+            availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
+        {
+            return availableFormat;
+        }
+    }
+
+    return availableFormats[0];
+}
+
+vk::PresentModeKHR MyRenderer::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
+{
+    for (const vk::PresentModeKHR& availablePresentMode : availablePresentModes)
+    {
+        if (availablePresentMode == vk::PresentModeKHR::eMailbox)
+        {
+            return availablePresentMode;
+        }
+    }
+
+    return vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D MyRenderer::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities, GLFWwindow* window)
+{
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+    {
+        return capabilities.currentExtent;
+    }
+
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+
+    vk::Extent2D actualExtent = {
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height)
+    };
+
+    actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+    actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+    return actualExtent;
 }
