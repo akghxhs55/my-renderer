@@ -1,8 +1,8 @@
 - [x] Create Instance
 - [x] Create Debug Utils Messenger
 - [x] Create Device and Queues
-- [ ] Create Surface
-- [ ] Create Swapchain and Image Views
+- [x] Create Surface
+- [x] Create Swapchain and Image Views
 - [ ] Create Render Pass
 - [ ] Create Graphics Pipeline
 - [ ] Implement Drawing
