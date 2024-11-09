@@ -1,0 +1,30 @@
+#ifndef WINDOW_H
+#define WINDOW_H
+
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
+#define VULKAN_HPP_NO_CONSTRUCTORS
+#include <vulkan/vulkan_raii.hpp>
+
+
+class Window {
+public:
+    static constexpr auto WindowTitle = "My Renderer";
+    static constexpr uint32_t Width = 800;
+    static constexpr uint32_t Height = 600;
+
+    GLFWwindow* const glfwWindow;
+    const vk::raii::SurfaceKHR surface;
+
+    explicit Window(const vk::raii::Instance& instance);
+    ~Window();
+
+private:
+    static GLFWwindow* createGlfwWindow();
+    vk::raii::SurfaceKHR createSurface(const vk::raii::Instance& instance) const;
+};
+
+
+#endif //WINDOW_H

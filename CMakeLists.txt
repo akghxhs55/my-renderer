@@ -4,8 +4,12 @@ project(my_renderer)
 set(CMAKE_CXX_STANDARD 20)
 
 add_executable(my_renderer sources/main.cpp
-        sources/my_renderer.cpp
-        sources/my_renderer.h)
+        sources/my_renderer.cpp sources/my_renderer.h
+        sources/window.cpp sources/window.h
+        sources/environment.cpp sources/environment.h
+        sources/swapchain_data.cpp
+        sources/swapchain_data.h
+)
 
 find_package(VulkanLoader REQUIRED)
 target_link_libraries(my_renderer Vulkan::Loader)
