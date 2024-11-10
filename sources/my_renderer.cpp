@@ -7,11 +7,10 @@
 MyRenderer::MyRenderer() :
     environment(ApplicationName, ApplicationVersion),
     window(environment.instance),
-    physicalDevice(createPhysicalDevice()),
-    queueFamilyIndices(createQueueFamilyIndices()),
-    device(createDevice()),
-    presentQueue(createPresentQueue()),
-    swapchainData(window.glfwWindow, window.surface, physicalDevice, queueFamilyIndices, device)
+    physicalDeviceData(environment.instance, window.surface, deviceExtensions),
+    device(createDevice(physicalDeviceData.physicalDevice, physicalDeviceData.graphicsQueueFamilyIndex.value())),
+    presentQueue(device.getQueue(physicalDeviceData.presentQueueFamilyIndex.value(), 0)),
+    swapchainData(window, physicalDeviceData, device)
 {
 }
 
@@ -28,47 +27,12 @@ void MyRenderer::run()
     }
 }
 
-vk::raii::PhysicalDevice MyRenderer::createPhysicalDevice() const
+vk::raii::Device MyRenderer::createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t graphicsQueueFamilyIndex) const
 {
-    const std::vector<vk::raii::PhysicalDevice> physicalDevices = environment.instance.enumeratePhysicalDevices();
-
-    for (const vk::raii::PhysicalDevice& physicalDevice : physicalDevices)
-    {
-        if (isPhysicalDeviceSuitable(physicalDevice, window.surface))
-        {
-            return physicalDevice;
-        }
-    }
-
-    throw std::runtime_error("Failed to find a suitable GPU.");
-}
-
-std::vector<uint32_t> MyRenderer::createQueueFamilyIndices() const
-{
-    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, window.surface);
-
-    std::vector<uint32_t> queueFamilyIndices;
-    if (indices.graphicsFamily.has_value())
-    {
-        queueFamilyIndices.push_back(indices.graphicsFamily.value());
-    }
-
-    if (indices.presentFamily.has_value() and
-        indices.presentFamily.value() != indices.graphicsFamily.value())
-    {
-        queueFamilyIndices.push_back(indices.presentFamily.value());
-    }
-
-    return queueFamilyIndices;
-}
-
-vk::raii::Device MyRenderer::createDevice() const
-{
-    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, window.surface);
     constexpr float queuePriority = 1.0f;
 
     vk::DeviceQueueCreateInfo queueCreateInfo{
-        .queueFamilyIndex = indices.graphicsFamily.value(),
+        .queueFamilyIndex = graphicsQueueFamilyIndex,
         .queueCount = 1,
         .pQueuePriorities = &queuePriority
     };
@@ -93,72 +57,6 @@ vk::raii::Device MyRenderer::createDevice() const
     }
 }
 
-vk::raii::Queue MyRenderer::createPresentQueue() const
-{
-    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, window.surface);
-
-    return device.getQueue(indices.presentFamily.value(), 0);
-}
-
 void MyRenderer::drawFrame()
 {
-}
-
-bool MyRenderer::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice, const vk::raii::SurfaceKHR &surface)
-{
-    const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-
-    const bool extensionSupported = checkDeviceExtensionSupport(physicalDevice);
-
-    bool swapChainAdequate = false;
-    if (extensionSupported)
-    {
-        const std::vector<vk::SurfaceFormatKHR> formats = physicalDevice.getSurfaceFormatsKHR(surface);
-        const std::vector<vk::PresentModeKHR> presentModes = physicalDevice.getSurfacePresentModesKHR(surface);
-
-        swapChainAdequate = !formats.empty() and !presentModes.empty();
-    }
-
-    return indices.isComplete() and
-           extensionSupported and
-           swapChainAdequate;
-}
-
-bool MyRenderer::checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice)
-{
-    const std::vector<vk::ExtensionProperties> availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
-    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-    for (const vk::ExtensionProperties& extension : availableExtensions)
-    {
-        requiredExtensions.erase(extension.extensionName);
-    }
-
-    return requiredExtensions.empty();
-}
-
-MyRenderer::QueueFamilyIndices MyRenderer::findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice, const vk::raii::SurfaceKHR& surface)
-{
-    QueueFamilyIndices indices;
-
-    const std::vector<vk::QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
-    for (uint32_t i = 0; i < queueFamilies.size(); ++i)
-    {
-        if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
-        {
-            indices.graphicsFamily = i;
-        }
-
-        if (physicalDevice.getSurfaceSupportKHR(i, surface))
-        {
-            indices.presentFamily = i;
-        }
-
-        if (indices.isComplete())
-        {
-            break;
-        }
-    }
-
-    return indices;
 }

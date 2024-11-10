@@ -4,9 +4,8 @@
 #include <iostream>
 
 
-SwapchainData::SwapchainData(const GLFWwindow* glfwWindow, const vk::raii::SurfaceKHR& surface,
-                             const vk::raii::PhysicalDevice& physicalDevice, const std::vector<uint32_t>& queueFamilyIndices, const vk::raii::Device& device) :
-    swapchain(createSwapchain(glfwWindow, surface, physicalDevice, queueFamilyIndices, device)),
+SwapchainData::SwapchainData(const Window& window, const PhysicalDeviceData& physicalDeviceData, const vk::raii::Device& device) :
+    swapchain(createSwapchain(window.glfwWindow, window.surface, physicalDeviceData.physicalDevice, physicalDeviceData.getQueueFamilyIndices(), device)),
     images(createSwapchainImages()),
     imageViews(createImageViews(device))
 {

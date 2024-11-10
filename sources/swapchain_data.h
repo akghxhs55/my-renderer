@@ -9,13 +9,15 @@
 #include <iostream>
 #include <vulkan/vulkan_raii.hpp>
 
+#include "window.h"
+#include "physical_device_data.h"
+
 
 class SwapchainData {
 public:
     const vk::raii::SwapchainKHR swapchain;
 
-    SwapchainData(const GLFWwindow* glfwWindow, const vk::raii::SurfaceKHR& surface,
-                  const vk::raii::PhysicalDevice& physicalDevice, const std::vector<uint32_t>& queueFamilyIndices, const vk::raii::Device& device);
+    SwapchainData(const Window& window, const PhysicalDeviceData& physicalDeviceData, const vk::raii::Device& device);
     ~SwapchainData();
 
 private:

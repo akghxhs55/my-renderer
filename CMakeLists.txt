@@ -9,6 +9,8 @@ add_executable(my_renderer sources/main.cpp
         sources/environment.cpp sources/environment.h
         sources/swapchain_data.cpp
         sources/swapchain_data.h
+        sources/physical_device_data.cpp
+        sources/physical_device_data.h
 )
 
 find_package(VulkanLoader REQUIRED)
