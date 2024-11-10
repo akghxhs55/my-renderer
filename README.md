@@ -3,8 +3,8 @@
 - [x] Create Device and Queues
 - [x] Create Surface
 - [x] Create Swapchain and Image Views
-- [ ] Create Render Pass
-- [ ] Create Graphics Pipeline
+- [x] Create Render Pass
+- [x] Create Graphics Pipeline
 - [ ] Implement Drawing
 - [ ] Create Vertex Buffer
 - [ ] Create Index Buffer

@@ -31,10 +31,20 @@ private:
     const vk::raii::Device device;
     const vk::raii::Queue presentQueue;
     const SwapchainData swapchainData;
+    const vk::raii::PipelineLayout pipelineLayout;
+    const vk::raii::RenderPass renderPass;
+    const vk::raii::Pipeline graphicsPipeline;
 
-    vk::raii::Device createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t graphicsQueueFamilyIndex) const;
+    vk::raii::Device createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t& graphicsQueueFamilyIndex) const;
+
+    static vk::raii::PipelineLayout createPipelineLayout(const vk::raii::Device& device);
+    static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);
+    vk::raii::Pipeline createGraphicsPipeline(const vk::raii::Device& device) const;
 
     void drawFrame();
+
+    static std::vector<char> readFile(const std::string& filename);
+    static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);
 };
 
 

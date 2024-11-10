@@ -15,8 +15,18 @@ SwapchainData::~SwapchainData()
 {
 }
 
+const vk::Format& SwapchainData::getFormat() const
+{
+    return format;
+}
+
+const vk::Extent2D& SwapchainData::getExtent() const
+{
+    return extent;
+}
+
 vk::raii::SwapchainKHR SwapchainData::createSwapchain(const GLFWwindow* glfwWindow, const vk::raii::SurfaceKHR& surface,
-    const vk::raii::PhysicalDevice& physicalDevice, const std::vector<uint32_t>& queueFamilyIndices, const vk::raii::Device& device)
+                                                      const vk::raii::PhysicalDevice& physicalDevice, const std::vector<uint32_t>& queueFamilyIndices, const vk::raii::Device& device)
 {
     const auto [capabilities, formats, presentModes] = querySwapChainSupport(physicalDevice, surface);
 

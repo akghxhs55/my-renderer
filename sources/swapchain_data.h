@@ -20,6 +20,9 @@ public:
     SwapchainData(const Window& window, const PhysicalDeviceData& physicalDeviceData, const vk::raii::Device& device);
     ~SwapchainData();
 
+    const vk::Format& getFormat() const;
+    const vk::Extent2D& getExtent() const;
+
 private:
     struct SwapchainSupportDetails
     {
