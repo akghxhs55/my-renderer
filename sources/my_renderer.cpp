@@ -14,7 +14,9 @@ MyRenderer::MyRenderer() :
     pipelineLayout(createPipelineLayout(device)),
     renderPass(createRenderPass(device, swapchainData.surfaceFormat.format)),
     graphicsPipeline(createGraphicsPipeline(device)),
-    swapchainFramebuffers(createFramebuffers(device))
+    swapchainFramebuffers(createFramebuffers(device)),
+    commandPool(createCommandPool(device, physicalDeviceData.graphicsQueueFamilyIndex.value())),
+    commandBuffers(createCommandBuffers(device, commandPool))
 {
 }
 
@@ -285,6 +287,42 @@ std::vector<vk::raii::Framebuffer> MyRenderer::createFramebuffers(const vk::raii
     return framebuffers;
 }
 
+vk::raii::CommandPool MyRenderer::createCommandPool(const vk::raii::Device& device,
+    const uint32_t& queueFamilyIndex)
+{
+    const vk::CommandPoolCreateInfo createInfo{
+        .queueFamilyIndex = queueFamilyIndex
+    };
+
+    try
+    {
+        return device.createCommandPool(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create command pool with error code: " + std::to_string(error.code().value()));
+    }
+}
+
+std::vector<vk::raii::CommandBuffer> MyRenderer::createCommandBuffers(const vk::raii::Device& device,
+    const vk::raii::CommandPool& commandPool)
+{
+    vk::CommandBufferAllocateInfo allocateInfo{
+        .commandPool = *commandPool,
+        .level = vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = 1
+    };
+
+    try
+    {
+        return device.allocateCommandBuffers(allocateInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to allocate command buffers with error code: " + std::to_string(error.code().value()));
+    }
+}
+
 void MyRenderer::drawFrame()
 {
 }
@@ -322,5 +360,69 @@ vk::raii::ShaderModule MyRenderer::createShaderModule(const vk::raii::Device& de
     catch (const vk::SystemError& error)
     {
         throw std::runtime_error("Failed to create shader module with error code: " + std::to_string(error.code().value()));
+    }
+}
+
+void MyRenderer::recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer,
+    const vk::raii::RenderPass& renderPass, const vk::raii::Pipeline& graphicsPipeline,
+    const std::vector<vk::raii::Framebuffer>& swapchainFramebuffers, const vk::Extent2D& swapchainExtent)
+{
+    constexpr vk::CommandBufferBeginInfo beginInfo{
+        .pInheritanceInfo = nullptr
+    };
+
+    try
+    {
+        commandBuffer.begin(beginInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to begin recording command buffer with error code: " + std::to_string(error.code().value()));
+    }
+
+    constexpr vk::ClearValue clearColor{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } };
+
+    const vk::RenderPassBeginInfo renderPassBeginInfo{
+        .renderPass = *renderPass,
+        .framebuffer = *swapchainFramebuffers[0],
+        .renderArea = {
+            .offset = { 0, 0 },
+            .extent = swapchainExtent
+        },
+        .clearValueCount = 1,
+        .pClearValues = &clearColor
+    };
+
+    commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+
+    const vk::Viewport viewport{
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(swapchainExtent.width),
+        .height = static_cast<float>(swapchainExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+    commandBuffer.setViewport(0, viewport);
+
+    const vk::Rect2D scissor{
+        .offset = { 0, 0 },
+        .extent = swapchainExtent
+    };
+    commandBuffer.setScissor(0, scissor);
+
+    commandBuffer.draw(3, 1, 0, 0);
+
+    commandBuffer.endRenderPass();
+
+    try
+    {
+        commandBuffer.end();
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to end recording command buffer with error code: " + std::to_string(error.code().value()));
     }
 }

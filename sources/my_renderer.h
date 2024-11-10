@@ -35,6 +35,8 @@ private:
     const vk::raii::RenderPass renderPass;
     const vk::raii::Pipeline graphicsPipeline;
     const std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
+    const vk::raii::CommandPool commandPool;
+    const std::vector<vk::raii::CommandBuffer> commandBuffers;
 
     vk::raii::Device createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t& graphicsQueueFamilyIndex) const;
 
@@ -42,11 +44,14 @@ private:
     static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);
     vk::raii::Pipeline createGraphicsPipeline(const vk::raii::Device& device) const;
     std::vector<vk::raii::Framebuffer> createFramebuffers(const vk::raii::Device& device) const;
+    static vk::raii::CommandPool createCommandPool(const vk::raii::Device& device, const uint32_t& queueFamilyIndex);
+    static std::vector<vk::raii::CommandBuffer> createCommandBuffers(const vk::raii::Device& device, const vk::raii::CommandPool& commandPool);
 
     void drawFrame();
 
     static std::vector<char> readFile(const std::string& filename);
     static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);
+    static void recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, const vk::raii::RenderPass& renderPass, const vk::raii::Pipeline& graphicsPipeline, const std::vector<vk::raii::Framebuffer>& swapchainFramebuffers, const vk::Extent2D& swapchainExtent);
 };
 
 
