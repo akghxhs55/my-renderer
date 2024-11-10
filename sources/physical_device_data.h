@@ -16,6 +16,9 @@ public:
     ~PhysicalDeviceData();
 
     std::vector<uint32_t> getQueueFamilyIndices() const;
+    vk::SurfaceCapabilitiesKHR getSurfaceCapabilities(const vk::raii::SurfaceKHR& surface) const;
+    std::vector<vk::SurfaceFormatKHR> getSurfaceFormats(const vk::raii::SurfaceKHR& surface) const;
+    std::vector<vk::PresentModeKHR> getSurfacePresentModes(const vk::raii::SurfaceKHR& surface) const;
 
 private:
     struct QueueFamilyIndices

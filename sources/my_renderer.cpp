@@ -12,8 +12,9 @@ MyRenderer::MyRenderer() :
     presentQueue(device.getQueue(physicalDeviceData.presentQueueFamilyIndex.value(), 0)),
     swapchainData(window, physicalDeviceData, device),
     pipelineLayout(createPipelineLayout(device)),
-    renderPass(createRenderPass(device, swapchainData.getFormat())),
-    graphicsPipeline(createGraphicsPipeline(device))
+    renderPass(createRenderPass(device, swapchainData.surfaceFormat.format)),
+    graphicsPipeline(createGraphicsPipeline(device)),
+    swapchainFramebuffers(createFramebuffers(device))
 {
 }
 
@@ -160,14 +161,14 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& de
     const vk::Viewport viewport{
         .x = 0.0f,
         .y = 0.0f,
-        .width = static_cast<float>(swapchainData.getExtent().width),
-        .height = static_cast<float>(swapchainData.getExtent().height),
+        .width = static_cast<float>(swapchainData.extent.width),
+        .height = static_cast<float>(swapchainData.extent.height),
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
     const vk::Rect2D scissor{
         .offset = { 0, 0 },
-        .extent = swapchainData.getExtent()
+        .extent = swapchainData.extent
     };
 
     const vk::PipelineViewportStateCreateInfo viewportStateCreateInfo{
@@ -255,6 +256,33 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& de
     {
         throw std::runtime_error("Failed to create graphics pipeline with error code: " + std::to_string(error.code().value()));
     }
+}
+
+std::vector<vk::raii::Framebuffer> MyRenderer::createFramebuffers(const vk::raii::Device& device) const
+{
+    std::vector<vk::raii::Framebuffer> framebuffers;
+    for (const auto& imageView : swapchainData.imageViews)
+    {
+        const vk::FramebufferCreateInfo createInfo{
+            .renderPass = renderPass,
+            .attachmentCount = 1,
+            .pAttachments = &(*imageView),
+            .width = swapchainData.extent.width,
+            .height = swapchainData.extent.height,
+            .layers = 1
+        };
+
+        try
+        {
+            framebuffers.emplace_back(device.createFramebuffer(createInfo));
+        }
+        catch (const vk::SystemError& error)
+        {
+            throw std::runtime_error("Failed to create framebuffer with error code: " + std::to_string(error.code().value()));
+        }
+    }
+
+    return framebuffers;
 }
 
 void MyRenderer::drawFrame()

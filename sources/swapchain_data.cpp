@@ -5,7 +5,11 @@
 
 
 SwapchainData::SwapchainData(const Window& window, const PhysicalDeviceData& physicalDeviceData, const vk::raii::Device& device) :
-    swapchain(createSwapchain(window.glfwWindow, window.surface, physicalDeviceData.physicalDevice, physicalDeviceData.getQueueFamilyIndices(), device)),
+    capabilities(physicalDeviceData.getSurfaceCapabilities(window.surface)),
+    surfaceFormat(chooseSwapSurfaceFormat(physicalDeviceData.getSurfaceFormats(window.surface))),
+    presentMode(chooseSwapPresentMode(physicalDeviceData.getSurfacePresentModes(window.surface))),
+    extent(chooseSwapchainExtent(capabilities, window.glfwWindow)),
+    swapchain(createSwapchain(window.surface, physicalDeviceData.getQueueFamilyIndices(), device)),
     images(createSwapchainImages()),
     imageViews(createImageViews(device))
 {
@@ -15,25 +19,10 @@ SwapchainData::~SwapchainData()
 {
 }
 
-const vk::Format& SwapchainData::getFormat() const
+vk::raii::SwapchainKHR SwapchainData::createSwapchain(const vk::raii::SurfaceKHR& surface,
+                                                      const std::vector<uint32_t>& queueFamilyIndices,
+                                                      const vk::raii::Device& device) const
 {
-    return format;
-}
-
-const vk::Extent2D& SwapchainData::getExtent() const
-{
-    return extent;
-}
-
-vk::raii::SwapchainKHR SwapchainData::createSwapchain(const GLFWwindow* glfwWindow, const vk::raii::SurfaceKHR& surface,
-                                                      const vk::raii::PhysicalDevice& physicalDevice, const std::vector<uint32_t>& queueFamilyIndices, const vk::raii::Device& device)
-{
-    const auto [capabilities, formats, presentModes] = querySwapChainSupport(physicalDevice, surface);
-
-    const vk::SurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(formats);
-    const vk::PresentModeKHR presentMode = chooseSwapPresentMode(presentModes);
-    const vk::Extent2D extent = chooseSwapchainExtent(capabilities, glfwWindow);
-
     uint32_t imageCount = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 and
         capabilities.maxImageCount < imageCount)
@@ -59,9 +48,6 @@ vk::raii::SwapchainKHR SwapchainData::createSwapchain(const GLFWwindow* glfwWind
         .oldSwapchain = nullptr
     };
 
-    format = surfaceFormat.format;
-    this->extent = extent;
-
     try
     {
         return device.createSwapchainKHR(createInfo);
@@ -85,7 +71,7 @@ std::vector<vk::raii::ImageView> SwapchainData::createImageViews(const vk::raii:
         const vk::ImageViewCreateInfo createInfo{
             .image = image,
             .viewType = vk::ImageViewType::e2D,
-            .format = format,
+            .format = surfaceFormat.format,
             .components = {
                 .r = vk::ComponentSwizzle::eIdentity,
                 .g = vk::ComponentSwizzle::eIdentity,
@@ -112,16 +98,6 @@ std::vector<vk::raii::ImageView> SwapchainData::createImageViews(const vk::raii:
     }
 
     return imageViews;
-}
-
-SwapchainData::SwapchainSupportDetails SwapchainData::querySwapChainSupport(const vk::raii::PhysicalDevice& physicalDevice,
-                                                                            const vk::raii::SurfaceKHR& surface)
-{
-    return SwapchainSupportDetails{
-        .capabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface),
-        .formats = physicalDevice.getSurfaceFormatsKHR(surface),
-        .presentModes = physicalDevice.getSurfacePresentModesKHR(surface)
-    };
 }
 
 vk::SurfaceFormatKHR SwapchainData::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)

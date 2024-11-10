@@ -33,6 +33,22 @@ std::vector<uint32_t> PhysicalDeviceData::getQueueFamilyIndices() const
     return queueFamilyIndices;
 }
 
+vk::SurfaceCapabilitiesKHR PhysicalDeviceData::getSurfaceCapabilities(
+    const vk::raii::SurfaceKHR& surface) const
+{
+    return physicalDevice.getSurfaceCapabilitiesKHR(surface);
+}
+
+std::vector<vk::SurfaceFormatKHR> PhysicalDeviceData::getSurfaceFormats(const vk::raii::SurfaceKHR& surface) const
+{
+    return physicalDevice.getSurfaceFormatsKHR(surface);
+}
+
+std::vector<vk::PresentModeKHR> PhysicalDeviceData::getSurfacePresentModes(const vk::raii::SurfaceKHR& surface) const
+{
+    return physicalDevice.getSurfacePresentModesKHR(surface);
+}
+
 vk::raii::PhysicalDevice PhysicalDeviceData::createPhysicalDevice(const vk::raii::Instance& instance,
                                                                   const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions)
 {

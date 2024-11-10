@@ -34,12 +34,14 @@ private:
     const vk::raii::PipelineLayout pipelineLayout;
     const vk::raii::RenderPass renderPass;
     const vk::raii::Pipeline graphicsPipeline;
+    const std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
 
     vk::raii::Device createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t& graphicsQueueFamilyIndex) const;
 
     static vk::raii::PipelineLayout createPipelineLayout(const vk::raii::Device& device);
     static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);
     vk::raii::Pipeline createGraphicsPipeline(const vk::raii::Device& device) const;
+    std::vector<vk::raii::Framebuffer> createFramebuffers(const vk::raii::Device& device) const;
 
     void drawFrame();
 
