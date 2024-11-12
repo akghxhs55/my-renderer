@@ -15,7 +15,7 @@ class MyRenderer {
 public:
     MyRenderer();
     ~MyRenderer();
-    void run();
+    void run() const;
 
 private:
     static constexpr auto ApplicationName = "My Renderer";
@@ -29,6 +29,7 @@ private:
     const Window window;
     const PhysicalDeviceData physicalDeviceData;
     const vk::raii::Device device;
+    const vk::raii::Queue graphicsQueue;
     const vk::raii::Queue presentQueue;
     const SwapchainData swapchainData;
     const vk::raii::PipelineLayout pipelineLayout;
@@ -37,6 +38,9 @@ private:
     const std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     const vk::raii::CommandPool commandPool;
     const std::vector<vk::raii::CommandBuffer> commandBuffers;
+    const vk::raii::Semaphore imageAvailableSemaphore;
+    const vk::raii::Semaphore renderFinishedSemaphore;
+    const vk::raii::Fence inFlightFence;
 
     vk::raii::Device createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t& graphicsQueueFamilyIndex) const;
 
@@ -46,12 +50,14 @@ private:
     std::vector<vk::raii::Framebuffer> createFramebuffers(const vk::raii::Device& device) const;
     static vk::raii::CommandPool createCommandPool(const vk::raii::Device& device, const uint32_t& queueFamilyIndex);
     static std::vector<vk::raii::CommandBuffer> createCommandBuffers(const vk::raii::Device& device, const vk::raii::CommandPool& commandPool);
+    static vk::raii::Semaphore createSemaphore(const vk::raii::Device& device);
+    static vk::raii::Fence createFence(const vk::raii::Device& device, const vk::FenceCreateFlags& flags);
 
-    void drawFrame();
+    void drawFrame() const;
 
     static std::vector<char> readFile(const std::string& filename);
     static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);
-    static void recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, const vk::raii::RenderPass& renderPass, const vk::raii::Pipeline& graphicsPipeline, const std::vector<vk::raii::Framebuffer>& swapchainFramebuffers, const vk::Extent2D& swapchainExtent);
+    static void recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, const uint32_t& imageIndex, const vk::raii::RenderPass& renderPass, const vk::raii::Pipeline& graphicsPipeline, const std::vector<vk::raii::Framebuffer>& swapchainFramebuffers, const vk::Extent2D& swapchainExtent);
 };
 
 

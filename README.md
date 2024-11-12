@@ -5,7 +5,7 @@
 - [x] Create Swapchain and Image Views
 - [x] Create Render Pass
 - [x] Create Graphics Pipeline
-- [ ] Implement Drawing
+- [x] Implement Drawing
 - [ ] Create Vertex Buffer
 - [ ] Create Index Buffer
 - [ ] Create Texture

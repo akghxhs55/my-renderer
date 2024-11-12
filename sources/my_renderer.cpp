@@ -9,6 +9,7 @@ MyRenderer::MyRenderer() :
     window(environment.instance),
     physicalDeviceData(environment.instance, window.surface, deviceExtensions),
     device(createDevice(physicalDeviceData.physicalDevice, physicalDeviceData.graphicsQueueFamilyIndex.value())),
+    graphicsQueue(device.getQueue(physicalDeviceData.graphicsQueueFamilyIndex.value(), 0)),
     presentQueue(device.getQueue(physicalDeviceData.presentQueueFamilyIndex.value(), 0)),
     swapchainData(window, physicalDeviceData, device),
     pipelineLayout(createPipelineLayout(device)),
@@ -16,38 +17,46 @@ MyRenderer::MyRenderer() :
     graphicsPipeline(createGraphicsPipeline(device)),
     swapchainFramebuffers(createFramebuffers(device)),
     commandPool(createCommandPool(device, physicalDeviceData.graphicsQueueFamilyIndex.value())),
-    commandBuffers(createCommandBuffers(device, commandPool))
+    commandBuffers(createCommandBuffers(device, commandPool)),
+    imageAvailableSemaphore(createSemaphore(device)),
+    renderFinishedSemaphore(createSemaphore(device)),
+    inFlightFence(createFence(device, vk::FenceCreateFlagBits::eSignaled))
 {
 }
 
-MyRenderer::~MyRenderer()
-{
-}
+MyRenderer::~MyRenderer() = default;
 
-void MyRenderer::run()
+void MyRenderer::run() const
 {
     while (!glfwWindowShouldClose(window.glfwWindow))
     {
         glfwPollEvents();
         drawFrame();
     }
+
+    device.waitIdle();
 }
 
 vk::raii::Device MyRenderer::createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t& graphicsQueueFamilyIndex) const
 {
     constexpr float queuePriority = 1.0f;
 
-    vk::DeviceQueueCreateInfo queueCreateInfo{
-        .queueFamilyIndex = graphicsQueueFamilyIndex,
-        .queueCount = 1,
-        .pQueuePriorities = &queuePriority
-    };
+    const std::vector<uint32_t> queueFamilyIndices = physicalDeviceData.getQueueFamilyIndices();
+    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+    for (const auto& queueFamilyIndex : queueFamilyIndices)
+    {
+        queueCreateInfos.emplace_back(vk::DeviceQueueCreateInfo{
+            .queueFamilyIndex = queueFamilyIndex,
+            .queueCount = 1,
+            .pQueuePriorities = &queuePriority
+        });
+    }
 
-    vk::PhysicalDeviceFeatures physicalDeviceFeatures{};
+    constexpr vk::PhysicalDeviceFeatures physicalDeviceFeatures{};
 
     const vk::DeviceCreateInfo createInfo{
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queueCreateInfo,
+        .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
+        .pQueueCreateInfos = queueCreateInfos.data(),
         .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
         .ppEnabledExtensionNames = deviceExtensions.data(),
         .pEnabledFeatures = &physicalDeviceFeatures
@@ -107,13 +116,23 @@ vk::raii::RenderPass MyRenderer::createRenderPass(const vk::raii::Device& device
         .pColorAttachments = &colorAttachmentReference
     };
 
+    constexpr vk::SubpassDependency subpassDependency{
+        .srcSubpass = vk::SubpassExternal,
+        .dstSubpass = 0,
+        .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+        .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+        .srcAccessMask = vk::AccessFlagBits::eNoneKHR,
+        .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
+        .dependencyFlags = vk::DependencyFlagBits::eByRegion
+    };
+
     const vk::RenderPassCreateInfo createInfo{
         .attachmentCount = 1,
         .pAttachments = &colorAttachmentDescription,
         .subpassCount = 1,
         .pSubpasses = &subpassDescription,
-        .dependencyCount = 0,
-        .pDependencies = nullptr
+        .dependencyCount = 1,
+        .pDependencies = &subpassDependency
     };
 
     try
@@ -132,7 +151,7 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& de
     const vk::raii::ShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
     const vk::PipelineShaderStageCreateInfo vertShaderStageCreateInfo{
         .stage = vk::ShaderStageFlagBits::eVertex,
-        .module = vertShaderModule,
+        .module = *vertShaderModule,
         .pName = "main",
         .pSpecializationInfo = nullptr
     };
@@ -141,7 +160,7 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& de
     const vk::raii::ShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
     const vk::PipelineShaderStageCreateInfo fragShaderStageCreateInfo{
         .stage = vk::ShaderStageFlagBits::eFragment,
-        .module = fragShaderModule,
+        .module = *fragShaderModule,
         .pName = "main",
         .pSpecializationInfo = nullptr
     };
@@ -185,7 +204,7 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& de
         .rasterizerDiscardEnable = vk::False,
         .polygonMode = vk::PolygonMode::eFill,
         .cullMode = vk::CullModeFlagBits::eBack,
-        .frontFace = vk::FrontFace::eCounterClockwise,
+        .frontFace = vk::FrontFace::eClockwise,
         .depthBiasEnable = vk::False,
         .depthBiasConstantFactor = 0.0f,
         .depthBiasClamp = 0.0f,
@@ -223,7 +242,7 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& de
 
     constexpr std::array<vk::DynamicState, 2> dynamicStates = {
         vk::DynamicState::eViewport,
-        vk::DynamicState::eLineWidth
+        vk::DynamicState::eScissor
     };
 
     const vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo{
@@ -291,6 +310,7 @@ vk::raii::CommandPool MyRenderer::createCommandPool(const vk::raii::Device& devi
     const uint32_t& queueFamilyIndex)
 {
     const vk::CommandPoolCreateInfo createInfo{
+        .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
         .queueFamilyIndex = queueFamilyIndex
     };
 
@@ -307,7 +327,7 @@ vk::raii::CommandPool MyRenderer::createCommandPool(const vk::raii::Device& devi
 std::vector<vk::raii::CommandBuffer> MyRenderer::createCommandBuffers(const vk::raii::Device& device,
     const vk::raii::CommandPool& commandPool)
 {
-    vk::CommandBufferAllocateInfo allocateInfo{
+    const vk::CommandBufferAllocateInfo allocateInfo{
         .commandPool = *commandPool,
         .level = vk::CommandBufferLevel::ePrimary,
         .commandBufferCount = 1
@@ -323,8 +343,83 @@ std::vector<vk::raii::CommandBuffer> MyRenderer::createCommandBuffers(const vk::
     }
 }
 
-void MyRenderer::drawFrame()
+vk::raii::Semaphore MyRenderer::createSemaphore(const vk::raii::Device& device)
 {
+    try
+    {
+        return device.createSemaphore({});
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create semaphore with error code: " + std::to_string(error.code().value()));
+    }
+}
+
+vk::raii::Fence MyRenderer::createFence(const vk::raii::Device& device, const vk::FenceCreateFlags& flags)
+{
+    try
+    {
+        return device.createFence({ .flags = flags });
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create fence with error code: " + std::to_string(error.code().value()));
+    }
+}
+
+void MyRenderer::drawFrame() const
+{
+    if (const vk::Result result = device.waitForFences(*inFlightFence, vk::True, std::numeric_limits<uint64_t>::max()); result != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Failed to wait for fence with error code: " + vk::to_string(result));
+    }
+    device.resetFences(*inFlightFence);
+
+    const auto& [result, imageIndex] = swapchainData.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore, nullptr);
+    if (result != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Failed to acquire next image with error code: " + vk::to_string(result));
+    }
+
+    commandBuffers[0].reset();
+    recordCommandBuffer(commandBuffers[0], imageIndex, renderPass, graphicsPipeline, swapchainFramebuffers, swapchainData.extent);
+
+    const std::array<vk::Semaphore, 1> waitSemaphores = { *imageAvailableSemaphore };
+    constexpr std::array<vk::PipelineStageFlags, 1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+    const std::array<vk::Semaphore, 1> signalSemaphores = { *renderFinishedSemaphore };
+
+    const vk::SubmitInfo submitInfo{
+        .waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
+        .pWaitSemaphores = waitSemaphores.data(),
+        .pWaitDstStageMask = waitStages.data(),
+        .commandBufferCount = 1,
+        .pCommandBuffers = &(*commandBuffers[0]),
+        .signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
+        .pSignalSemaphores = signalSemaphores.data()
+    };
+
+    try
+    {
+        graphicsQueue.submit(submitInfo, *inFlightFence);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to submit queue with error code: " + std::to_string(error.code().value()));
+    }
+
+    const vk::PresentInfoKHR presentInfo{
+        .waitSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
+        .pWaitSemaphores = signalSemaphores.data(),
+        .swapchainCount = 1,
+        .pSwapchains = &(*swapchainData.swapchain),
+        .pImageIndices = &imageIndex,
+        .pResults = nullptr
+    };
+
+    if (const vk::Result result = presentQueue.presentKHR(presentInfo); result != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Failed to present queue with error code: " + vk::to_string(result));
+    }
 }
 
 std::vector<char> MyRenderer::readFile(const std::string& filename)
@@ -363,7 +458,7 @@ vk::raii::ShaderModule MyRenderer::createShaderModule(const vk::raii::Device& de
     }
 }
 
-void MyRenderer::recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer,
+void MyRenderer::recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, const uint32_t& imageIndex,
     const vk::raii::RenderPass& renderPass, const vk::raii::Pipeline& graphicsPipeline,
     const std::vector<vk::raii::Framebuffer>& swapchainFramebuffers, const vk::Extent2D& swapchainExtent)
 {
@@ -384,7 +479,7 @@ void MyRenderer::recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffe
 
     const vk::RenderPassBeginInfo renderPassBeginInfo{
         .renderPass = *renderPass,
-        .framebuffer = *swapchainFramebuffers[0],
+        .framebuffer = *swapchainFramebuffers[imageIndex],
         .renderArea = {
             .offset = { 0, 0 },
             .extent = swapchainExtent
