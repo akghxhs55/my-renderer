@@ -37,7 +37,7 @@ private:
     const vk::raii::Pipeline graphicsPipeline;
     const std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     const vk::raii::CommandPool commandPool;
-    const std::vector<vk::raii::CommandBuffer> commandBuffers;
+    const vk::raii::CommandBuffer commandBuffer;
     const vk::raii::Semaphore imageAvailableSemaphore;
     const vk::raii::Semaphore renderFinishedSemaphore;
     const vk::raii::Fence inFlightFence;
@@ -49,7 +49,7 @@ private:
     vk::raii::Pipeline createGraphicsPipeline(const vk::raii::Device& device) const;
     std::vector<vk::raii::Framebuffer> createFramebuffers(const vk::raii::Device& device) const;
     static vk::raii::CommandPool createCommandPool(const vk::raii::Device& device, const uint32_t& queueFamilyIndex);
-    static std::vector<vk::raii::CommandBuffer> createCommandBuffers(const vk::raii::Device& device, const vk::raii::CommandPool& commandPool);
+    static vk::raii::CommandBuffer createCommandBuffer(const vk::raii::Device& device, const vk::raii::CommandPool& commandPool);
     static vk::raii::Semaphore createSemaphore(const vk::raii::Device& device);
     static vk::raii::Fence createFence(const vk::raii::Device& device, const vk::FenceCreateFlags& flags);
 

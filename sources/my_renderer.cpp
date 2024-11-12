@@ -17,7 +17,7 @@ MyRenderer::MyRenderer() :
     graphicsPipeline(createGraphicsPipeline(device)),
     swapchainFramebuffers(createFramebuffers(device)),
     commandPool(createCommandPool(device, physicalDeviceData.graphicsQueueFamilyIndex.value())),
-    commandBuffers(createCommandBuffers(device, commandPool)),
+    commandBuffer(createCommandBuffer(device, commandPool)),
     imageAvailableSemaphore(createSemaphore(device)),
     renderFinishedSemaphore(createSemaphore(device)),
     inFlightFence(createFence(device, vk::FenceCreateFlagBits::eSignaled))
@@ -324,7 +324,7 @@ vk::raii::CommandPool MyRenderer::createCommandPool(const vk::raii::Device& devi
     }
 }
 
-std::vector<vk::raii::CommandBuffer> MyRenderer::createCommandBuffers(const vk::raii::Device& device,
+vk::raii::CommandBuffer MyRenderer::createCommandBuffer(const vk::raii::Device& device,
     const vk::raii::CommandPool& commandPool)
 {
     const vk::CommandBufferAllocateInfo allocateInfo{
@@ -335,7 +335,7 @@ std::vector<vk::raii::CommandBuffer> MyRenderer::createCommandBuffers(const vk::
 
     try
     {
-        return device.allocateCommandBuffers(allocateInfo);
+        return std::move(device.allocateCommandBuffers(allocateInfo)[0]);
     }
     catch (const vk::SystemError& error)
     {
@@ -381,8 +381,8 @@ void MyRenderer::drawFrame() const
         throw std::runtime_error("Failed to acquire next image with error code: " + vk::to_string(result));
     }
 
-    commandBuffers[0].reset();
-    recordCommandBuffer(commandBuffers[0], imageIndex, renderPass, graphicsPipeline, swapchainFramebuffers, swapchainData.extent);
+    commandBuffer.reset();
+    recordCommandBuffer(commandBuffer, imageIndex, renderPass, graphicsPipeline, swapchainFramebuffers, swapchainData.extent);
 
     const std::array<vk::Semaphore, 1> waitSemaphores = { *imageAvailableSemaphore };
     constexpr std::array<vk::PipelineStageFlags, 1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
@@ -393,7 +393,7 @@ void MyRenderer::drawFrame() const
         .pWaitSemaphores = waitSemaphores.data(),
         .pWaitDstStageMask = waitStages.data(),
         .commandBufferCount = 1,
-        .pCommandBuffers = &(*commandBuffers[0]),
+        .pCommandBuffers = &(*commandBuffer),
         .signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
         .pSignalSemaphores = signalSemaphores.data()
     };
