@@ -1,5 +1,5 @@
-#ifndef MY_SHADER_H
-#define MY_SHADER_H
+#ifndef MY_RENDERER_H
+#define MY_RENDERER_H
 
 
 #define VULKAN_HPP_NO_CONSTRUCTORS
@@ -61,4 +61,4 @@ private:
 };
 
 
-#endif //MY_SHADER_H
+#endif //MY_RENDERER_H
