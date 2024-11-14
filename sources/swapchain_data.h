@@ -9,7 +9,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "window.h"
-#include "physical_device_data.h"
+#include "physical_device_manager.h"
 
 
 class SwapchainData {
@@ -22,7 +22,7 @@ public:
     const std::vector<vk::Image> images;
     const std::vector<vk::raii::ImageView> imageViews;
 
-    SwapchainData(const Window& window, const PhysicalDeviceData& physicalDeviceData, const vk::raii::Device& device);
+    SwapchainData(const Window& window, const PhysicalDeviceManager& physicalDeviceData, const vk::raii::Device& device);
     ~SwapchainData();
 
 private:

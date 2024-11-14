@@ -1,19 +1,19 @@
-#ifndef PHYSICAL_DEVICE_DATA_H
-#define PHYSICAL_DEVICE_DATA_H
+#ifndef PHYSICAL_DEVICE_MANAGER_H
+#define PHYSICAL_DEVICE_MANAGER_H
 
 
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
 
-class PhysicalDeviceData {
+class PhysicalDeviceManager {
 public:
     const vk::raii::PhysicalDevice physicalDevice;
     const std::optional<uint32_t> graphicsQueueFamilyIndex;
     const std::optional<uint32_t> presentQueueFamilyIndex;
 
-    PhysicalDeviceData(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions);
-    ~PhysicalDeviceData();
+    PhysicalDeviceManager(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions);
+    ~PhysicalDeviceManager();
 
     std::vector<uint32_t> getQueueFamilyIndices() const;
     vk::SurfaceCapabilitiesKHR getSurfaceCapabilities(const vk::raii::SurfaceKHR& surface) const;
@@ -40,4 +40,4 @@ private:
 };
 
 
-#endif //PHYSICAL_DEVICE_DATA_H
+#endif //PHYSICAL_DEVICE_MANAGER_H

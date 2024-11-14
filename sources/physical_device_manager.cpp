@@ -1,21 +1,19 @@
-#include "physical_device_data.h"
+#include "physical_device_manager.h"
 
 
 #include <set>
 
 
-PhysicalDeviceData::PhysicalDeviceData(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions) :
+PhysicalDeviceManager::PhysicalDeviceManager(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions) :
     physicalDevice(createPhysicalDevice(instance, surface, deviceExtensions)),
     graphicsQueueFamilyIndex(findQueueFamilies(physicalDevice, surface).graphics),
     presentQueueFamilyIndex(findQueueFamilies(physicalDevice, surface).present)
 {
 }
 
-PhysicalDeviceData::~PhysicalDeviceData()
-{
-}
+PhysicalDeviceManager::~PhysicalDeviceManager() = default;
 
-std::vector<uint32_t> PhysicalDeviceData::getQueueFamilyIndices() const
+std::vector<uint32_t> PhysicalDeviceManager::getQueueFamilyIndices() const
 {
     std::vector<uint32_t> queueFamilyIndices;
 
@@ -33,23 +31,23 @@ std::vector<uint32_t> PhysicalDeviceData::getQueueFamilyIndices() const
     return queueFamilyIndices;
 }
 
-vk::SurfaceCapabilitiesKHR PhysicalDeviceData::getSurfaceCapabilities(
+vk::SurfaceCapabilitiesKHR PhysicalDeviceManager::getSurfaceCapabilities(
     const vk::raii::SurfaceKHR& surface) const
 {
     return physicalDevice.getSurfaceCapabilitiesKHR(surface);
 }
 
-std::vector<vk::SurfaceFormatKHR> PhysicalDeviceData::getSurfaceFormats(const vk::raii::SurfaceKHR& surface) const
+std::vector<vk::SurfaceFormatKHR> PhysicalDeviceManager::getSurfaceFormats(const vk::raii::SurfaceKHR& surface) const
 {
     return physicalDevice.getSurfaceFormatsKHR(surface);
 }
 
-std::vector<vk::PresentModeKHR> PhysicalDeviceData::getSurfacePresentModes(const vk::raii::SurfaceKHR& surface) const
+std::vector<vk::PresentModeKHR> PhysicalDeviceManager::getSurfacePresentModes(const vk::raii::SurfaceKHR& surface) const
 {
     return physicalDevice.getSurfacePresentModesKHR(surface);
 }
 
-vk::raii::PhysicalDevice PhysicalDeviceData::createPhysicalDevice(const vk::raii::Instance& instance,
+vk::raii::PhysicalDevice PhysicalDeviceManager::createPhysicalDevice(const vk::raii::Instance& instance,
                                                                   const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions)
 {
     const std::vector<vk::raii::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
@@ -65,7 +63,7 @@ vk::raii::PhysicalDevice PhysicalDeviceData::createPhysicalDevice(const vk::raii
     throw std::runtime_error("Failed to find a suitable GPU.");
 }
 
-bool PhysicalDeviceData::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice,
+bool PhysicalDeviceManager::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice,
     const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions)
 {
     const QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
@@ -86,7 +84,7 @@ bool PhysicalDeviceData::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice
            swapChainAdequate;
 }
 
-PhysicalDeviceData::QueueFamilyIndices PhysicalDeviceData::findQueueFamilies(
+PhysicalDeviceManager::QueueFamilyIndices PhysicalDeviceManager::findQueueFamilies(
     const vk::raii::PhysicalDevice& physicalDevice, const vk::raii::SurfaceKHR& surface)
 {
     QueueFamilyIndices indices;
@@ -113,7 +111,7 @@ PhysicalDeviceData::QueueFamilyIndices PhysicalDeviceData::findQueueFamilies(
     return indices;
 }
 
-bool PhysicalDeviceData::checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice, const std::vector<const char*>& deviceExtensions)
+bool PhysicalDeviceManager::checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice, const std::vector<const char*>& deviceExtensions)
 {
     const std::vector<vk::ExtensionProperties> availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
     std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());

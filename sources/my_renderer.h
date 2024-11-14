@@ -7,7 +7,8 @@
 
 #include "environment.h"
 #include "window.h"
-#include "physical_device_data.h"
+#include "physical_device_manager.h"
+#include "device_manager.h"
 #include "swapchain_data.h"
 
 
@@ -27,10 +28,8 @@ private:
 
     const Environment environment;
     const Window window;
-    const PhysicalDeviceData physicalDeviceData;
-    const vk::raii::Device device;
-    const vk::raii::Queue graphicsQueue;
-    const vk::raii::Queue presentQueue;
+    const PhysicalDeviceManager physicalDeviceManager;
+    const DeviceManager deviceManager;
     const SwapchainData swapchainData;
     const vk::raii::PipelineLayout pipelineLayout;
     const vk::raii::RenderPass renderPass;
@@ -41,8 +40,6 @@ private:
     const vk::raii::Semaphore imageAvailableSemaphore;
     const vk::raii::Semaphore renderFinishedSemaphore;
     const vk::raii::Fence inFlightFence;
-
-    vk::raii::Device createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t& graphicsQueueFamilyIndex) const;
 
     static vk::raii::PipelineLayout createPipelineLayout(const vk::raii::Device& device);
     static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);

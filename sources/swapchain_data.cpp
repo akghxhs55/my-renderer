@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-SwapchainData::SwapchainData(const Window& window, const PhysicalDeviceData& physicalDeviceData, const vk::raii::Device& device) :
+SwapchainData::SwapchainData(const Window& window, const PhysicalDeviceManager& physicalDeviceData, const vk::raii::Device& device) :
     capabilities(physicalDeviceData.getSurfaceCapabilities(window.surface)),
     surfaceFormat(chooseSwapSurfaceFormat(physicalDeviceData.getSurfaceFormats(window.surface))),
     presentMode(chooseSwapPresentMode(physicalDeviceData.getSurfacePresentModes(window.surface))),
@@ -15,9 +15,7 @@ SwapchainData::SwapchainData(const Window& window, const PhysicalDeviceData& phy
 {
 }
 
-SwapchainData::~SwapchainData()
-{
-}
+SwapchainData::~SwapchainData() = default;
 
 vk::raii::SwapchainKHR SwapchainData::createSwapchain(const vk::raii::SurfaceKHR& surface,
                                                       const std::vector<uint32_t>& queueFamilyIndices,

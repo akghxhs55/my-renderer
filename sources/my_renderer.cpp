@@ -7,20 +7,18 @@
 MyRenderer::MyRenderer() :
     environment(ApplicationName, ApplicationVersion),
     window(environment.instance),
-    physicalDeviceData(environment.instance, window.surface, deviceExtensions),
-    device(createDevice(physicalDeviceData.physicalDevice, physicalDeviceData.graphicsQueueFamilyIndex.value())),
-    graphicsQueue(device.getQueue(physicalDeviceData.graphicsQueueFamilyIndex.value(), 0)),
-    presentQueue(device.getQueue(physicalDeviceData.presentQueueFamilyIndex.value(), 0)),
-    swapchainData(window, physicalDeviceData, device),
-    pipelineLayout(createPipelineLayout(device)),
-    renderPass(createRenderPass(device, swapchainData.surfaceFormat.format)),
-    graphicsPipeline(createGraphicsPipeline(device)),
-    swapchainFramebuffers(createFramebuffers(device)),
-    commandPool(createCommandPool(device, physicalDeviceData.graphicsQueueFamilyIndex.value())),
-    commandBuffer(createCommandBuffer(device, commandPool)),
-    imageAvailableSemaphore(createSemaphore(device)),
-    renderFinishedSemaphore(createSemaphore(device)),
-    inFlightFence(createFence(device, vk::FenceCreateFlagBits::eSignaled))
+    physicalDeviceManager(environment.instance, window.surface, deviceExtensions),
+    deviceManager(physicalDeviceManager, deviceExtensions),
+    swapchainData(window, physicalDeviceManager, deviceManager.device),
+    pipelineLayout(createPipelineLayout(deviceManager.device)),
+    renderPass(createRenderPass(deviceManager.device, swapchainData.surfaceFormat.format)),
+    graphicsPipeline(createGraphicsPipeline(deviceManager.device)),
+    swapchainFramebuffers(createFramebuffers(deviceManager.device)),
+    commandPool(createCommandPool(deviceManager.device, physicalDeviceManager.graphicsQueueFamilyIndex.value())),
+    commandBuffer(createCommandBuffer(deviceManager.device, commandPool)),
+    imageAvailableSemaphore(createSemaphore(deviceManager.device)),
+    renderFinishedSemaphore(createSemaphore(deviceManager.device)),
+    inFlightFence(createFence(deviceManager.device, vk::FenceCreateFlagBits::eSignaled))
 {
 }
 
@@ -34,42 +32,7 @@ void MyRenderer::run() const
         drawFrame();
     }
 
-    device.waitIdle();
-}
-
-vk::raii::Device MyRenderer::createDevice(const vk::raii::PhysicalDevice& physicalDevice, const uint32_t& graphicsQueueFamilyIndex) const
-{
-    constexpr float queuePriority = 1.0f;
-
-    const std::vector<uint32_t> queueFamilyIndices = physicalDeviceData.getQueueFamilyIndices();
-    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-    for (const auto& queueFamilyIndex : queueFamilyIndices)
-    {
-        queueCreateInfos.emplace_back(vk::DeviceQueueCreateInfo{
-            .queueFamilyIndex = queueFamilyIndex,
-            .queueCount = 1,
-            .pQueuePriorities = &queuePriority
-        });
-    }
-
-    constexpr vk::PhysicalDeviceFeatures physicalDeviceFeatures{};
-
-    const vk::DeviceCreateInfo createInfo{
-        .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
-        .pQueueCreateInfos = queueCreateInfos.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-        .ppEnabledExtensionNames = deviceExtensions.data(),
-        .pEnabledFeatures = &physicalDeviceFeatures
-    };
-
-    try
-    {
-        return physicalDevice.createDevice(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create Vulkan device with error code: " + std::to_string(error.code().value()));
-    }
+    deviceManager.device.waitIdle();
 }
 
 vk::raii::PipelineLayout MyRenderer::createPipelineLayout(const vk::raii::Device& device)
@@ -369,11 +332,11 @@ vk::raii::Fence MyRenderer::createFence(const vk::raii::Device& device, const vk
 
 void MyRenderer::drawFrame() const
 {
-    if (const vk::Result result = device.waitForFences(*inFlightFence, vk::True, std::numeric_limits<uint64_t>::max()); result != vk::Result::eSuccess)
+    if (const vk::Result result = deviceManager.device.waitForFences(*inFlightFence, vk::True, std::numeric_limits<uint64_t>::max()); result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to wait for fence with error code: " + vk::to_string(result));
     }
-    device.resetFences(*inFlightFence);
+    deviceManager.device.resetFences(*inFlightFence);
 
     const auto& [result, imageIndex] = swapchainData.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore, nullptr);
     if (result != vk::Result::eSuccess)
@@ -400,7 +363,7 @@ void MyRenderer::drawFrame() const
 
     try
     {
-        graphicsQueue.submit(submitInfo, *inFlightFence);
+        deviceManager.graphicsQueue.submit(submitInfo, *inFlightFence);
     }
     catch (const vk::SystemError& error)
     {
@@ -416,7 +379,7 @@ void MyRenderer::drawFrame() const
         .pResults = nullptr
     };
 
-    if (const vk::Result result = presentQueue.presentKHR(presentInfo); result != vk::Result::eSuccess)
+    if (const vk::Result result = deviceManager.presentQueue.presentKHR(presentInfo); result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to present queue with error code: " + vk::to_string(result));
     }
