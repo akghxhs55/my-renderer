@@ -1,8 +1,5 @@
 #include "my_renderer.h"
 
-#include <set>
-#include <fstream>
-
 
 MyRenderer::MyRenderer() :
     environment(ApplicationName, ApplicationVersion),
@@ -10,10 +7,7 @@ MyRenderer::MyRenderer() :
     physicalDeviceManager(environment.instance, window.surface, deviceExtensions),
     deviceManager(physicalDeviceManager, deviceExtensions),
     swapchainData(window, physicalDeviceManager, deviceManager.device),
-    pipelineLayout(createPipelineLayout(deviceManager.device)),
-    renderPass(createRenderPass(deviceManager.device, swapchainData.surfaceFormat.format)),
-    graphicsPipeline(createGraphicsPipeline(deviceManager.device)),
-    swapchainFramebuffers(createFramebuffers(deviceManager.device)),
+    renderPipeline(deviceManager.device, swapchainData),
     commandPool(createCommandPool(deviceManager.device, physicalDeviceManager.graphicsQueueFamilyIndex.value())),
     commandBuffer(createCommandBuffer(deviceManager.device, commandPool)),
     imageAvailableSemaphore(createSemaphore(deviceManager.device)),
@@ -33,240 +27,6 @@ void MyRenderer::run() const
     }
 
     deviceManager.device.waitIdle();
-}
-
-vk::raii::PipelineLayout MyRenderer::createPipelineLayout(const vk::raii::Device& device)
-{
-    constexpr vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo{
-        .setLayoutCount = 0,
-        .pSetLayouts = nullptr,
-        .pushConstantRangeCount = 0,
-        .pPushConstantRanges = nullptr
-    };
-
-    try
-    {
-        return device.createPipelineLayout(pipelineLayoutCreateInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create pipeline layout with error code: " + std::to_string(error.code().value()));
-    }
-}
-
-vk::raii::RenderPass MyRenderer::createRenderPass(const vk::raii::Device& device,
-    const vk::Format& swapchainImageFormat)
-{
-    const vk::AttachmentDescription colorAttachmentDescription{
-        .format = swapchainImageFormat,
-        .samples = vk::SampleCountFlagBits::e1,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-        .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-        .initialLayout = vk::ImageLayout::eUndefined,
-        .finalLayout = vk::ImageLayout::ePresentSrcKHR
-    };
-
-    constexpr vk::AttachmentReference colorAttachmentReference{
-        .attachment = 0,
-        .layout = vk::ImageLayout::eColorAttachmentOptimal
-    };
-
-    const vk::SubpassDescription subpassDescription{
-        .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentReference
-    };
-
-    constexpr vk::SubpassDependency subpassDependency{
-        .srcSubpass = vk::SubpassExternal,
-        .dstSubpass = 0,
-        .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-        .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-        .srcAccessMask = vk::AccessFlagBits::eNoneKHR,
-        .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
-        .dependencyFlags = vk::DependencyFlagBits::eByRegion
-    };
-
-    const vk::RenderPassCreateInfo createInfo{
-        .attachmentCount = 1,
-        .pAttachments = &colorAttachmentDescription,
-        .subpassCount = 1,
-        .pSubpasses = &subpassDescription,
-        .dependencyCount = 1,
-        .pDependencies = &subpassDependency
-    };
-
-    try
-    {
-        return device.createRenderPass(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create render pass with error code: " + std::to_string(error.code().value()));
-    }
-}
-
-vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& device) const
-{
-    const auto vertShaderCode = readFile("../shaders/vertex.spv");
-    const vk::raii::ShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
-    const vk::PipelineShaderStageCreateInfo vertShaderStageCreateInfo{
-        .stage = vk::ShaderStageFlagBits::eVertex,
-        .module = *vertShaderModule,
-        .pName = "main",
-        .pSpecializationInfo = nullptr
-    };
-
-    const auto fragShaderCode = readFile("../shaders/fragment.spv");
-    const vk::raii::ShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
-    const vk::PipelineShaderStageCreateInfo fragShaderStageCreateInfo{
-        .stage = vk::ShaderStageFlagBits::eFragment,
-        .module = *fragShaderModule,
-        .pName = "main",
-        .pSpecializationInfo = nullptr
-    };
-
-    const std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = { vertShaderStageCreateInfo, fragShaderStageCreateInfo };
-
-    constexpr vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo{
-        .vertexBindingDescriptionCount = 0,
-        .pVertexBindingDescriptions = nullptr,
-        .vertexAttributeDescriptionCount = 0,
-        .pVertexAttributeDescriptions = nullptr
-    };
-
-    constexpr vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{
-        .topology = vk::PrimitiveTopology::eTriangleList,
-        .primitiveRestartEnable = vk::False
-    };
-
-    const vk::Viewport viewport{
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = static_cast<float>(swapchainData.extent.width),
-        .height = static_cast<float>(swapchainData.extent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-    const vk::Rect2D scissor{
-        .offset = { 0, 0 },
-        .extent = swapchainData.extent
-    };
-
-    const vk::PipelineViewportStateCreateInfo viewportStateCreateInfo{
-        .viewportCount = 1,
-        .pViewports = &viewport,
-        .scissorCount = 1,
-        .pScissors = &scissor
-    };
-
-    constexpr vk::PipelineRasterizationStateCreateInfo rasterizationCreateInfo{
-        .depthClampEnable = vk::False,
-        .rasterizerDiscardEnable = vk::False,
-        .polygonMode = vk::PolygonMode::eFill,
-        .cullMode = vk::CullModeFlagBits::eBack,
-        .frontFace = vk::FrontFace::eClockwise,
-        .depthBiasEnable = vk::False,
-        .depthBiasConstantFactor = 0.0f,
-        .depthBiasClamp = 0.0f,
-        .depthBiasSlopeFactor = 0.0f,
-        .lineWidth = 1.0f,
-    };
-
-    constexpr vk::PipelineMultisampleStateCreateInfo multisampleCreateInfo{
-        .rasterizationSamples = vk::SampleCountFlagBits::e1,
-        .sampleShadingEnable = vk::False,
-        .minSampleShading = 1.0f,
-        .pSampleMask = nullptr,
-        .alphaToCoverageEnable = vk::False,
-        .alphaToOneEnable = vk::False
-    };
-
-    const vk::PipelineColorBlendAttachmentState colorBlendAttachmentState{
-        .blendEnable = vk::False,
-        .srcColorBlendFactor = vk::BlendFactor::eOne,
-        .dstColorBlendFactor = vk::BlendFactor::eZero,
-        .colorBlendOp = vk::BlendOp::eAdd,
-        .srcAlphaBlendFactor = vk::BlendFactor::eOne,
-        .dstAlphaBlendFactor = vk::BlendFactor::eZero,
-        .alphaBlendOp = vk::BlendOp::eAdd,
-        .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-    };
-
-    const vk::PipelineColorBlendStateCreateInfo colorBlendCreateInfo{
-        .logicOpEnable = vk::False,
-        .logicOp = vk::LogicOp::eCopy,
-        .attachmentCount = 1,
-        .pAttachments = &colorBlendAttachmentState,
-        .blendConstants = {{ 0.0f, 0.0f, 0.0f, 0.0f }}
-    };
-
-    constexpr std::array<vk::DynamicState, 2> dynamicStates = {
-        vk::DynamicState::eViewport,
-        vk::DynamicState::eScissor
-    };
-
-    const vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo{
-        .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
-        .pDynamicStates = dynamicStates.data()
-    };
-
-    const vk::GraphicsPipelineCreateInfo createInfo{
-        .stageCount = static_cast<uint32_t>(shaderStages.size()),
-        .pStages = shaderStages.data(),
-        .pVertexInputState = &vertexInputCreateInfo,
-        .pInputAssemblyState = &inputAssemblyCreateInfo,
-        .pTessellationState = nullptr,
-        .pViewportState = &viewportStateCreateInfo,
-        .pRasterizationState = &rasterizationCreateInfo,
-        .pMultisampleState = &multisampleCreateInfo,
-        .pDepthStencilState = nullptr,
-        .pColorBlendState = &colorBlendCreateInfo,
-        .pDynamicState = &dynamicStateCreateInfo,
-        .layout = pipelineLayout,
-        .renderPass = renderPass,
-        .subpass = 0,
-        .basePipelineHandle = nullptr,
-        .basePipelineIndex = -1
-    };
-
-    try
-    {
-        return device.createGraphicsPipeline(nullptr, createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create graphics pipeline with error code: " + std::to_string(error.code().value()));
-    }
-}
-
-std::vector<vk::raii::Framebuffer> MyRenderer::createFramebuffers(const vk::raii::Device& device) const
-{
-    std::vector<vk::raii::Framebuffer> framebuffers;
-    for (const auto& imageView : swapchainData.imageViews)
-    {
-        const vk::FramebufferCreateInfo createInfo{
-            .renderPass = renderPass,
-            .attachmentCount = 1,
-            .pAttachments = &(*imageView),
-            .width = swapchainData.extent.width,
-            .height = swapchainData.extent.height,
-            .layers = 1
-        };
-
-        try
-        {
-            framebuffers.emplace_back(device.createFramebuffer(createInfo));
-        }
-        catch (const vk::SystemError& error)
-        {
-            throw std::runtime_error("Failed to create framebuffer with error code: " + std::to_string(error.code().value()));
-        }
-    }
-
-    return framebuffers;
 }
 
 vk::raii::CommandPool MyRenderer::createCommandPool(const vk::raii::Device& device,
@@ -345,7 +105,7 @@ void MyRenderer::drawFrame() const
     }
 
     commandBuffer.reset();
-    recordCommandBuffer(commandBuffer, imageIndex, renderPass, graphicsPipeline, swapchainFramebuffers, swapchainData.extent);
+    recordCommandBuffer(commandBuffer, imageIndex, renderPipeline, swapchainData.extent);
 
     const std::array<vk::Semaphore, 1> waitSemaphores = { *imageAvailableSemaphore };
     constexpr std::array<vk::PipelineStageFlags, 1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
@@ -385,45 +145,7 @@ void MyRenderer::drawFrame() const
     }
 }
 
-std::vector<char> MyRenderer::readFile(const std::string& filename)
-{
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Failed to open file: " + filename);
-    }
-
-    const size_t fileSize = static_cast<size_t>(file.tellg());
-    std::vector<char> buffer(fileSize);
-
-    file.seekg(0);
-    file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
-
-    file.close();
-
-    return buffer;
-}
-
-vk::raii::ShaderModule MyRenderer::createShaderModule(const vk::raii::Device& device, const std::vector<char>& code)
-{
-    vk::ShaderModuleCreateInfo createInfo{
-        .codeSize = code.size(),
-        .pCode = reinterpret_cast<const uint32_t*>(code.data())
-    };
-
-    try
-    {
-        return device.createShaderModule(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create shader module with error code: " + std::to_string(error.code().value()));
-    }
-}
-
-void MyRenderer::recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, const uint32_t& imageIndex,
-    const vk::raii::RenderPass& renderPass, const vk::raii::Pipeline& graphicsPipeline,
-    const std::vector<vk::raii::Framebuffer>& swapchainFramebuffers, const vk::Extent2D& swapchainExtent)
+void MyRenderer::recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, const uint32_t& imageIndex, const RenderPipeline& renderPipeline, const vk::Extent2D& swapchainExtent)
 {
     constexpr vk::CommandBufferBeginInfo beginInfo{
         .pInheritanceInfo = nullptr
@@ -441,8 +163,8 @@ void MyRenderer::recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffe
     constexpr vk::ClearValue clearColor{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } };
 
     const vk::RenderPassBeginInfo renderPassBeginInfo{
-        .renderPass = *renderPass,
-        .framebuffer = *swapchainFramebuffers[imageIndex],
+        .renderPass = *renderPipeline.renderPass,
+        .framebuffer = *renderPipeline.swapchainFramebuffers[imageIndex],
         .renderArea = {
             .offset = { 0, 0 },
             .extent = swapchainExtent
@@ -453,7 +175,7 @@ void MyRenderer::recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffe
 
     commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPipeline.pipeline);
 
     const vk::Viewport viewport{
         .x = 0.0f,

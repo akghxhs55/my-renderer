@@ -13,6 +13,8 @@ add_executable(my_renderer sources/main.cpp
         sources/physical_device_manager.h
         sources/device_manager.cpp
         sources/device_manager.h
+        sources/render_pipeline.cpp
+        sources/render_pipeline.h
 )
 
 find_package(VulkanLoader REQUIRED)
