@@ -5,7 +5,7 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
-#include "swapchain_data.h"
+#include "swapchain_manager.h"
 
 
 class RenderPipeline {
@@ -15,14 +15,14 @@ public:
     const vk::raii::Pipeline pipeline;
     const std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
 
-    RenderPipeline(const vk::raii::Device& device, const SwapchainData& swapchainData);
+    RenderPipeline(const vk::raii::Device& device, const SwapchainManager& swapchainData);
     ~RenderPipeline();
 
 private:
     static vk::raii::PipelineLayout createPipelineLayout(const vk::raii::Device& device);
     static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);
     vk::raii::Pipeline createPipeline(const vk::raii::Device& device, const vk::Extent2D& extent) const;
-    std::vector<vk::raii::Framebuffer> createFramebuffers(const vk::raii::Device& device, const std::vector<vk::raii::ImageView>& imageViews, const vk::Extent2D& extent) const;
+    std::vector<vk::raii::Framebuffer> createFramebuffers(const vk::raii::Device& device, const SwapchainManager& swapchainManager) const;
 
     static std::vector<char> readFile(const std::string& filename);
     static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);

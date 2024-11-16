@@ -4,10 +4,15 @@
 #include <set>
 
 
-PhysicalDeviceManager::PhysicalDeviceManager(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions) :
-    physicalDevice(createPhysicalDevice(instance, surface, deviceExtensions)),
-    graphicsQueueFamilyIndex(findQueueFamilies(physicalDevice, surface).graphics),
-    presentQueueFamilyIndex(findQueueFamilies(physicalDevice, surface).present)
+const std::vector<const char*> PhysicalDeviceManager::deviceExtensions = {
+    "VK_KHR_portability_subset",
+    vk::KHRSwapchainExtensionName
+};
+
+PhysicalDeviceManager::PhysicalDeviceManager(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface) :
+    physicalDevice(createPhysicalDevice(instance, surface)),
+    graphicsQueueFamilyIndex(findQueueFamilies(physicalDevice, surface).graphics.value()),
+    presentQueueFamilyIndex(findQueueFamilies(physicalDevice, surface).present.value())
 {
 }
 
@@ -16,16 +21,10 @@ PhysicalDeviceManager::~PhysicalDeviceManager() = default;
 std::vector<uint32_t> PhysicalDeviceManager::getQueueFamilyIndices() const
 {
     std::vector<uint32_t> queueFamilyIndices;
-
-    if (graphicsQueueFamilyIndex.has_value())
+    queueFamilyIndices.push_back(graphicsQueueFamilyIndex);
+    if (graphicsQueueFamilyIndex != presentQueueFamilyIndex)
     {
-        queueFamilyIndices.push_back(graphicsQueueFamilyIndex.value());
-    }
-
-    if (presentQueueFamilyIndex.has_value() and
-        presentQueueFamilyIndex.value() != graphicsQueueFamilyIndex.value())
-    {
-        queueFamilyIndices.push_back(presentQueueFamilyIndex.value());
+        queueFamilyIndices.push_back(presentQueueFamilyIndex);
     }
 
     return queueFamilyIndices;
@@ -48,7 +47,7 @@ std::vector<vk::PresentModeKHR> PhysicalDeviceManager::getSurfacePresentModes(co
 }
 
 vk::raii::PhysicalDevice PhysicalDeviceManager::createPhysicalDevice(const vk::raii::Instance& instance,
-                                                                  const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions)
+                                                                  const vk::raii::SurfaceKHR& surface)
 {
     const std::vector<vk::raii::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
 

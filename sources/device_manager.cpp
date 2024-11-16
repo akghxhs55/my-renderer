@@ -1,16 +1,16 @@
 #include "device_manager.h"
 
 
-DeviceManager::DeviceManager(const PhysicalDeviceManager& physicalDeviceManager, const std::vector<const char*>& deviceExtensions)
-    : device(createDevice(physicalDeviceManager, deviceExtensions)),
-      graphicsQueue(device.getQueue(physicalDeviceManager.graphicsQueueFamilyIndex.value(), 0)),
-      presentQueue(device.getQueue(physicalDeviceManager.presentQueueFamilyIndex.value(), 0))
+DeviceManager::DeviceManager(const PhysicalDeviceManager& physicalDeviceManager)
+    : device(createDevice(physicalDeviceManager)),
+      graphicsQueue(device.getQueue(physicalDeviceManager.graphicsQueueFamilyIndex, 0)),
+      presentQueue(device.getQueue(physicalDeviceManager.presentQueueFamilyIndex, 0))
 {
 }
 
 DeviceManager::~DeviceManager() = default;
 
-vk::raii::Device DeviceManager::createDevice(const PhysicalDeviceManager& physicalDeviceManager, const std::vector<const char*>& deviceExtensions)
+vk::raii::Device DeviceManager::createDevice(const PhysicalDeviceManager& physicalDeviceManager)
 {
     constexpr float queuePriority = 1.0f;
 
@@ -30,8 +30,8 @@ vk::raii::Device DeviceManager::createDevice(const PhysicalDeviceManager& physic
     const vk::DeviceCreateInfo createInfo{
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
         .pQueueCreateInfos = queueCreateInfos.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-        .ppEnabledExtensionNames = deviceExtensions.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(PhysicalDeviceManager::deviceExtensions.size()),
+        .ppEnabledExtensionNames = PhysicalDeviceManager::deviceExtensions.data(),
         .pEnabledFeatures = &physicalDeviceFeatures
     };
 

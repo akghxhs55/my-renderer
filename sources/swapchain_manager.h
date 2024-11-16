@@ -1,5 +1,5 @@
-#ifndef SWAPCHAIN_DATA_H
-#define SWAPCHAIN_DATA_H
+#ifndef SWAPCHAIN_MANAGER_H
+#define SWAPCHAIN_MANAGER_H
 
 
 #define GLFW_INCLUDE_VULKAN
@@ -12,7 +12,7 @@
 #include "physical_device_manager.h"
 
 
-class SwapchainData {
+class SwapchainManager {
 public:
     const vk::SurfaceCapabilitiesKHR capabilities;
     const vk::SurfaceFormatKHR surfaceFormat;
@@ -22,19 +22,19 @@ public:
     const std::vector<vk::Image> images;
     const std::vector<vk::raii::ImageView> imageViews;
 
-    SwapchainData(const Window& window, const PhysicalDeviceManager& physicalDeviceData, const vk::raii::Device& device);
-    ~SwapchainData();
+    SwapchainManager(const Window& window, const PhysicalDeviceManager& physicalDeviceManager, const vk::raii::Device& device);
+    ~SwapchainManager();
 
 private:
+    static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
+    static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
+    vk::Extent2D chooseSwapchainExtent(const GLFWwindow* glfwWindow) const;
     vk::raii::SwapchainKHR createSwapchain(const vk::raii::SurfaceKHR& surface, const std::vector<uint32_t>& queueFamilyIndices,
                                            const vk::raii::Device& device) const;
     std::vector<vk::Image> createSwapchainImages() const;
     std::vector<vk::raii::ImageView> createImageViews(const vk::raii::Device& device) const;
 
-    static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
-    static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
-    static vk::Extent2D chooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR& capabilities, const GLFWwindow* glfwWindow);
 };
 
 
-#endif //SWAPCHAIN_DATA_H
+#endif //SWAPCHAIN_MANAGER_H

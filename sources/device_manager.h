@@ -14,11 +14,11 @@ public:
     const vk::raii::Queue graphicsQueue;
     const vk::raii::Queue presentQueue;
 
-    explicit DeviceManager(const PhysicalDeviceManager& physicalDeviceManager, const std::vector<const char*>& deviceExtensions);
+    explicit DeviceManager(const PhysicalDeviceManager& physicalDeviceManager);
     ~DeviceManager();
 
 private:
-    static vk::raii::Device createDevice(const PhysicalDeviceManager& physicalDeviceManager, const std::vector<const char*>& deviceExtensions);
+    static vk::raii::Device createDevice(const PhysicalDeviceManager& physicalDeviceManager);
 };
 
 

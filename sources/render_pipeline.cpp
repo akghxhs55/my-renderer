@@ -4,11 +4,11 @@
 #include <fstream>
 
 
-RenderPipeline::RenderPipeline(const vk::raii::Device& device, const SwapchainData& swapchainData) :
+RenderPipeline::RenderPipeline(const vk::raii::Device& device, const SwapchainManager& swapchainData) :
     pipelineLayout(createPipelineLayout(device)),
     renderPass(createRenderPass(device, swapchainData.surfaceFormat.format)),
     pipeline(createPipeline(device, swapchainData.extent)),
-    swapchainFramebuffers(createFramebuffers(device, swapchainData.imageViews, swapchainData.extent))
+    swapchainFramebuffers(createFramebuffers(device, swapchainData))
 {
 }
 
@@ -221,17 +221,17 @@ vk::raii::Pipeline RenderPipeline::createPipeline(const vk::raii::Device& device
     }
 }
 
-std::vector<vk::raii::Framebuffer> RenderPipeline::createFramebuffers(const vk::raii::Device& device, const std::vector<vk::raii::ImageView>& imageViews, const vk::Extent2D& extent) const
+std::vector<vk::raii::Framebuffer> RenderPipeline::createFramebuffers(const vk::raii::Device& device, const SwapchainManager& swapchainManager) const
 {
     std::vector<vk::raii::Framebuffer> framebuffers;
-    for (const auto& imageView : imageViews)
+    for (const auto& imageView : swapchainManager.imageViews)
     {
         const vk::FramebufferCreateInfo createInfo{
             .renderPass = *renderPass,
             .attachmentCount = 1,
             .pAttachments = &(*imageView),
-            .width = extent.width,
-            .height = extent.height,
+            .width = swapchainManager.extent.width,
+            .height = swapchainManager.extent.height,
             .layers = 1
         };
 

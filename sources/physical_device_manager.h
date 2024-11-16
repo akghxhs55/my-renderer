@@ -8,11 +8,13 @@
 
 class PhysicalDeviceManager {
 public:
-    const vk::raii::PhysicalDevice physicalDevice;
-    const std::optional<uint32_t> graphicsQueueFamilyIndex;
-    const std::optional<uint32_t> presentQueueFamilyIndex;
+    static const std::vector<const char*> deviceExtensions;
 
-    PhysicalDeviceManager(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions);
+    const vk::raii::PhysicalDevice physicalDevice;
+    const uint32_t graphicsQueueFamilyIndex;
+    const uint32_t presentQueueFamilyIndex;
+
+    PhysicalDeviceManager(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface);
     ~PhysicalDeviceManager();
 
     std::vector<uint32_t> getQueueFamilyIndices() const;
@@ -32,9 +34,9 @@ private:
         }
     };
 
-    static vk::raii::PhysicalDevice createPhysicalDevice(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::vector<const char*>& deviceExtensions);
+    static vk::raii::PhysicalDevice createPhysicalDevice(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface);
 
-    static bool isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice &physicalDevice, const vk::raii::SurfaceKHR &surface, const std::vector<const char*>& deviceExtensions);
+    static bool isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice, const vk::raii::SurfaceKHR &surface, const std::vector<const char*>& deviceExtensions);
     static QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice, const vk::raii::SurfaceKHR& surface);
     static bool checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice, const std::vector<const char*>& deviceExtensions);
 };

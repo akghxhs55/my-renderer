@@ -1,23 +1,70 @@
-#include "swapchain_data.h"
+#include "swapchain_manager.h"
 
 
 #include <iostream>
 
 
-SwapchainData::SwapchainData(const Window& window, const PhysicalDeviceManager& physicalDeviceData, const vk::raii::Device& device) :
-    capabilities(physicalDeviceData.getSurfaceCapabilities(window.surface)),
-    surfaceFormat(chooseSwapSurfaceFormat(physicalDeviceData.getSurfaceFormats(window.surface))),
-    presentMode(chooseSwapPresentMode(physicalDeviceData.getSurfacePresentModes(window.surface))),
-    extent(chooseSwapchainExtent(capabilities, window.glfwWindow)),
-    swapchain(createSwapchain(window.surface, physicalDeviceData.getQueueFamilyIndices(), device)),
+SwapchainManager::SwapchainManager(const Window& window, const PhysicalDeviceManager& physicalDeviceManager, const vk::raii::Device& device) :
+    capabilities(physicalDeviceManager.getSurfaceCapabilities(window.surface)),
+    surfaceFormat(chooseSwapSurfaceFormat(physicalDeviceManager.getSurfaceFormats(window.surface))),
+    presentMode(chooseSwapPresentMode(physicalDeviceManager.getSurfacePresentModes(window.surface))),
+    extent(chooseSwapchainExtent(window.glfwWindow)),
+    swapchain(createSwapchain(window.surface, physicalDeviceManager.getQueueFamilyIndices(), device)),
     images(createSwapchainImages()),
     imageViews(createImageViews(device))
 {
 }
 
-SwapchainData::~SwapchainData() = default;
+SwapchainManager::~SwapchainManager() = default;
 
-vk::raii::SwapchainKHR SwapchainData::createSwapchain(const vk::raii::SurfaceKHR& surface,
+vk::SurfaceFormatKHR SwapchainManager::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
+{
+    for (const vk::SurfaceFormatKHR& availableFormat : availableFormats)
+    {
+        if (availableFormat.format == vk::Format::eB8G8R8A8Srgb and
+            availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
+        {
+            return availableFormat;
+        }
+    }
+
+    return availableFormats[0];
+}
+
+vk::PresentModeKHR SwapchainManager::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
+{
+    for (const vk::PresentModeKHR& availablePresentMode : availablePresentModes)
+    {
+        if (availablePresentMode == vk::PresentModeKHR::eMailbox)
+        {
+            return availablePresentMode;
+        }
+    }
+
+    return vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D SwapchainManager::chooseSwapchainExtent(const GLFWwindow* glfwWindow) const
+{
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+    {
+        return capabilities.currentExtent;
+    }
+
+    int width, height;
+    glfwGetFramebufferSize(const_cast<GLFWwindow*>(glfwWindow), &width, &height);
+
+    vk::Extent2D extent = {
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height)
+    };
+    extent.width = std::clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+    extent.height = std::clamp(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+    return extent;
+}
+
+vk::raii::SwapchainKHR SwapchainManager::createSwapchain(const vk::raii::SurfaceKHR& surface,
                                                       const std::vector<uint32_t>& queueFamilyIndices,
                                                       const vk::raii::Device& device) const
 {
@@ -56,12 +103,12 @@ vk::raii::SwapchainKHR SwapchainData::createSwapchain(const vk::raii::SurfaceKHR
     }
 }
 
-std::vector<vk::Image> SwapchainData::createSwapchainImages() const
+std::vector<vk::Image> SwapchainManager::createSwapchainImages() const
 {
     return swapchain.getImages();
 }
 
-std::vector<vk::raii::ImageView> SwapchainData::createImageViews(const vk::raii::Device& device) const
+std::vector<vk::raii::ImageView> SwapchainManager::createImageViews(const vk::raii::Device& device) const
 {
     std::vector<vk::raii::ImageView> imageViews;
     for (const auto image : images)
@@ -96,52 +143,4 @@ std::vector<vk::raii::ImageView> SwapchainData::createImageViews(const vk::raii:
     }
 
     return imageViews;
-}
-
-vk::SurfaceFormatKHR SwapchainData::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
-{
-    for (const vk::SurfaceFormatKHR& availableFormat : availableFormats)
-    {
-        if (availableFormat.format == vk::Format::eB8G8R8A8Srgb and
-            availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
-        {
-            return availableFormat;
-        }
-    }
-
-    return availableFormats[0];
-}
-
-vk::PresentModeKHR SwapchainData::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
-{
-    for (const vk::PresentModeKHR& availablePresentMode : availablePresentModes)
-    {
-        if (availablePresentMode == vk::PresentModeKHR::eMailbox)
-        {
-            return availablePresentMode;
-        }
-    }
-
-    return vk::PresentModeKHR::eFifo;
-}
-
-vk::Extent2D SwapchainData::chooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR& capabilities,
-    const GLFWwindow* glfwWindow)
-{
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-    {
-        return capabilities.currentExtent;
-    }
-
-    int width, height;
-    glfwGetFramebufferSize(const_cast<GLFWwindow*>(glfwWindow), &width, &height);
-
-    vk::Extent2D extent = {
-        static_cast<uint32_t>(width),
-        static_cast<uint32_t>(height)
-    };
-    extent.width = std::clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-    extent.height = std::clamp(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-
-    return extent;
 }
