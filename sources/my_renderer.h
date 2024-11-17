@@ -18,11 +18,12 @@ class MyRenderer {
 public:
     MyRenderer();
     ~MyRenderer();
-    void run() const;
+    void run();
 
 private:
     static constexpr auto ApplicationName = "My Renderer";
     static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 0, 0, 0);
+    static constexpr uint32_t MaxFramesInFlight = 2;
 
     const Environment environment;
     const Window window;
@@ -31,14 +32,15 @@ private:
     const SwapchainManager swapchainManager;
     const RenderPipeline renderPipeline;
     const CommandBufferManager commandBufferManager;
-    const vk::raii::Semaphore imageAvailableSemaphore;
-    const vk::raii::Semaphore renderFinishedSemaphore;
-    const vk::raii::Fence inFlightFence;
+    const std::vector<vk::raii::Semaphore> imageAvailableSemaphore;
+    const std::vector<vk::raii::Semaphore> renderFinishedSemaphore;
+    const std::vector<vk::raii::Fence> inFlightFence;
+    uint32_t currentFrame = 0;
 
-    static vk::raii::Semaphore createSemaphore(const vk::raii::Device& device);
-    static vk::raii::Fence createFence(const vk::raii::Device& device, const vk::FenceCreateFlags& flags);
+    static std::vector<vk::raii::Semaphore> createSemaphores(const vk::raii::Device& device);
+    static std::vector<vk::raii::Fence> createFences(const vk::raii::Device& device, const vk::FenceCreateFlags& flags);
 
-    void drawFrame() const;
+    void drawFrame();
 };
 
 

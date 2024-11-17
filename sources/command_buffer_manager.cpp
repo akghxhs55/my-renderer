@@ -1,15 +1,15 @@
 #include "command_buffer_manager.h"
 
 
-CommandBufferManager::CommandBufferManager(const vk::raii::Device& device, const uint32_t& queueFamilyIndex) :
+CommandBufferManager::CommandBufferManager(const uint32_t& maxFramesInFlight, const vk::raii::Device& device, const uint32_t& queueFamilyIndex) :
     commandPool(createCommandPool(device, queueFamilyIndex)),
-    commandBuffer(createCommandBuffer(device))
+    commandBuffers(createCommandBuffers(maxFramesInFlight, device))
 {
 }
 
 CommandBufferManager::~CommandBufferManager() = default;
 
-void CommandBufferManager::recordCommandBuffer(const uint32_t& imageIndex, const RenderPipeline& renderPipeline,
+void CommandBufferManager::recordCommandBuffer(const uint32_t& frameIndex, const uint32_t& imageIndex, const RenderPipeline& renderPipeline,
                                   const vk::Extent2D& swapchainExtent) const
 {
     constexpr vk::CommandBufferBeginInfo beginInfo{
@@ -18,7 +18,7 @@ void CommandBufferManager::recordCommandBuffer(const uint32_t& imageIndex, const
 
     try
     {
-        commandBuffer.begin(beginInfo);
+        commandBuffers[frameIndex].begin(beginInfo);
     }
     catch (const vk::SystemError& error)
     {
@@ -38,9 +38,9 @@ void CommandBufferManager::recordCommandBuffer(const uint32_t& imageIndex, const
         .pClearValues = &clearColor
     };
 
-    commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+    commandBuffers[frameIndex].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPipeline.pipeline);
+    commandBuffers[frameIndex].bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPipeline.pipeline);
 
     const vk::Viewport viewport{
         .x = 0.0f,
@@ -50,21 +50,21 @@ void CommandBufferManager::recordCommandBuffer(const uint32_t& imageIndex, const
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
-    commandBuffer.setViewport(0, viewport);
+    commandBuffers[frameIndex].setViewport(0, viewport);
 
     const vk::Rect2D scissor{
         .offset = { 0, 0 },
         .extent = swapchainExtent
     };
-    commandBuffer.setScissor(0, scissor);
+    commandBuffers[frameIndex].setScissor(0, scissor);
 
-    commandBuffer.draw(3, 1, 0, 0);
+    commandBuffers[frameIndex].draw(3, 1, 0, 0);
 
-    commandBuffer.endRenderPass();
+    commandBuffers[frameIndex].endRenderPass();
 
     try
     {
-        commandBuffer.end();
+        commandBuffers[frameIndex].end();
     }
     catch (const vk::SystemError& error)
     {
@@ -90,17 +90,17 @@ vk::raii::CommandPool CommandBufferManager::createCommandPool(const vk::raii::De
     }
 }
 
-vk::raii::CommandBuffer CommandBufferManager::createCommandBuffer(const vk::raii::Device& device) const
+std::vector<vk::raii::CommandBuffer> CommandBufferManager::createCommandBuffers(const uint32_t& maxFramesInFlight, const vk::raii::Device& device) const
 {
     const vk::CommandBufferAllocateInfo allocateInfo{
         .commandPool = *commandPool,
         .level = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = 1
+        .commandBufferCount = maxFramesInFlight
     };
 
     try
     {
-        return std::move(device.allocateCommandBuffers(allocateInfo)[0]);
+        return device.allocateCommandBuffers(allocateInfo);
     }
     catch (const vk::SystemError& error)
     {
