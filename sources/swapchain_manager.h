@@ -18,12 +18,20 @@ public:
     const vk::SurfaceFormatKHR surfaceFormat;
     const vk::PresentModeKHR presentMode;
     const vk::Extent2D extent;
-    const vk::raii::SwapchainKHR swapchain;
-    const std::vector<vk::Image> images;
-    const std::vector<vk::raii::ImageView> imageViews;
+private:
+    vk::raii::SwapchainKHR swapchain;
+    std::vector<vk::Image> images;
+    std::vector<vk::raii::ImageView> imageViews;
 
+public:
     SwapchainManager(const Window& window, const PhysicalDeviceManager& physicalDeviceManager, const vk::raii::Device& device);
     ~SwapchainManager();
+
+    const vk::raii::SwapchainKHR& getSwapchain() const;
+    const std::vector<vk::Image>& getImages() const;
+    const std::vector<vk::raii::ImageView>& getImageViews() const;
+
+    void recreateSwapchain(const vk::raii::SurfaceKHR& surface, const std::vector<uint32_t>& queueFamilyIndices, const vk::raii::Device& device);
 
 private:
     static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);

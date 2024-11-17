@@ -25,22 +25,24 @@ private:
     static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 0, 0, 0);
     static constexpr uint32_t MaxFramesInFlight = 2;
 
-    const Environment environment;
-    const Window window;
-    const PhysicalDeviceManager physicalDeviceManager;
-    const DeviceManager deviceManager;
-    const SwapchainManager swapchainManager;
-    const RenderPipeline renderPipeline;
-    const CommandBufferManager commandBufferManager;
-    const std::vector<vk::raii::Semaphore> imageAvailableSemaphore;
-    const std::vector<vk::raii::Semaphore> renderFinishedSemaphore;
-    const std::vector<vk::raii::Fence> inFlightFence;
-    uint32_t currentFrame = 0;
+    Environment environment;
+    Window window;
+    PhysicalDeviceManager physicalDeviceManager;
+    DeviceManager deviceManager;
+    SwapchainManager swapchainManager;
+    RenderPipeline renderPipeline;
+    CommandBufferManager commandBufferManager;
+    uint32_t currentFrame;
+    std::vector<vk::raii::Semaphore> imageAvailableSemaphore;
+    std::vector<vk::raii::Semaphore> renderFinishedSemaphore;
+    std::vector<vk::raii::Fence> inFlightFence;
 
     static std::vector<vk::raii::Semaphore> createSemaphores(const vk::raii::Device& device);
     static std::vector<vk::raii::Fence> createFences(const vk::raii::Device& device, const vk::FenceCreateFlags& flags);
 
     void drawFrame();
+
+    void recreateSwapchain();
 };
 
 

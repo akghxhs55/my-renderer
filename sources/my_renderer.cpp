@@ -9,10 +9,10 @@ MyRenderer::MyRenderer() :
     swapchainManager(window, physicalDeviceManager, deviceManager.device),
     renderPipeline(deviceManager.device, swapchainManager),
     commandBufferManager(MaxFramesInFlight, deviceManager.device, physicalDeviceManager.graphicsQueueFamilyIndex),
+    currentFrame(0),
     imageAvailableSemaphore(createSemaphores(deviceManager.device)),
     renderFinishedSemaphore(createSemaphores(deviceManager.device)),
-    inFlightFence(createFences(deviceManager.device, vk::FenceCreateFlagBits::eSignaled)),
-    currentFrame(0)
+    inFlightFence(createFences(deviceManager.device, vk::FenceCreateFlagBits::eSignaled))
 {
 }
 
@@ -20,7 +20,7 @@ MyRenderer::~MyRenderer() = default;
 
 void MyRenderer::run()
 {
-    while (!glfwWindowShouldClose(window.glfwWindow))
+    while (!window.shouldClose())
     {
         glfwPollEvents();
         drawFrame();
@@ -32,6 +32,8 @@ void MyRenderer::run()
 std::vector<vk::raii::Semaphore> MyRenderer::createSemaphores(const vk::raii::Device& device)
 {
     std::vector<vk::raii::Semaphore> semaphores;
+    semaphores.reserve(MaxFramesInFlight);
+
     for (size_t i = 0; i < MaxFramesInFlight; ++i)
     {
         try
@@ -43,12 +45,15 @@ std::vector<vk::raii::Semaphore> MyRenderer::createSemaphores(const vk::raii::De
             throw std::runtime_error("Failed to create semaphore with error code: " + std::to_string(error.code().value()));
         }
     }
+
     return semaphores;
 }
 
 std::vector<vk::raii::Fence> MyRenderer::createFences(const vk::raii::Device& device, const vk::FenceCreateFlags& flags)
 {
     std::vector<vk::raii::Fence> fences;
+    fences.reserve(MaxFramesInFlight);
+
     for (size_t i = 0; i < MaxFramesInFlight; ++i)
     {
         try
@@ -60,6 +65,7 @@ std::vector<vk::raii::Fence> MyRenderer::createFences(const vk::raii::Device& de
             throw std::runtime_error("Failed to create fence with error code: " + std::to_string(error.code().value()));
         }
     }
+
     return fences;
 }
 
@@ -69,13 +75,19 @@ void MyRenderer::drawFrame()
     {
         throw std::runtime_error("Failed to wait for fence with error code: " + vk::to_string(result));
     }
-    deviceManager.device.resetFences(*inFlightFence[currentFrame]);
 
-    const auto& [acquireImageResult, imageIndex] = swapchainManager.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore[currentFrame], nullptr);
-    if (acquireImageResult != vk::Result::eSuccess)
+    const auto& [acquireImageResult, imageIndex] = swapchainManager.getSwapchain().acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore[currentFrame], nullptr);
+    if (acquireImageResult == vk::Result::eErrorOutOfDateKHR)
+    {
+        recreateSwapchain();
+        return;
+    }
+    else if (acquireImageResult != vk::Result::eSuccess and acquireImageResult != vk::Result::eSuboptimalKHR)
     {
         throw std::runtime_error("Failed to acquire next image with error code: " + vk::to_string(acquireImageResult));
     }
+
+    deviceManager.device.resetFences(*inFlightFence[currentFrame]);
 
     commandBufferManager.commandBuffers[currentFrame].reset();
     commandBufferManager.recordCommandBuffer(currentFrame, imageIndex, renderPipeline, swapchainManager.extent);
@@ -107,15 +119,29 @@ void MyRenderer::drawFrame()
         .waitSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
         .pWaitSemaphores = signalSemaphores.data(),
         .swapchainCount = 1,
-        .pSwapchains = &(*swapchainManager.swapchain),
+        .pSwapchains = &(*swapchainManager.getSwapchain()),
         .pImageIndices = &imageIndex,
         .pResults = nullptr
     };
 
-    if (const vk::Result result = deviceManager.presentQueue.presentKHR(presentInfo); result != vk::Result::eSuccess)
+    const vk::Result presentResult = deviceManager.presentQueue.presentKHR(presentInfo);
+    if (presentResult == vk::Result::eErrorOutOfDateKHR or presentResult == vk::Result::eSuboptimalKHR or window.wasFramebufferResized())
     {
-        throw std::runtime_error("Failed to present queue with error code: " + vk::to_string(result));
+        window.resetFramebufferResized();
+        recreateSwapchain();
+    }
+    else if (presentResult != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Failed to present queue with error code: " + vk::to_string(presentResult));
     }
 
     currentFrame = (currentFrame + 1) % MaxFramesInFlight;
+}
+
+void MyRenderer::recreateSwapchain()
+{
+    deviceManager.device.waitIdle();
+    renderPipeline.clearSwapchainFramebuffers();
+    swapchainManager.recreateSwapchain(window.surface, physicalDeviceManager.getQueueFamilyIndices(), deviceManager.device);
+    renderPipeline.resetSwapchainFramebuffers(deviceManager.device, swapchainManager);
 }

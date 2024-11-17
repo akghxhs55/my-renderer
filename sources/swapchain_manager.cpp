@@ -17,6 +17,33 @@ SwapchainManager::SwapchainManager(const Window& window, const PhysicalDeviceMan
 
 SwapchainManager::~SwapchainManager() = default;
 
+const vk::raii::SwapchainKHR& SwapchainManager::getSwapchain() const
+{
+    return swapchain;
+}
+
+const std::vector<vk::Image>& SwapchainManager::getImages() const
+{
+    return images;
+}
+
+const std::vector<vk::raii::ImageView>& SwapchainManager::getImageViews() const
+{
+    return imageViews;
+}
+
+void SwapchainManager::recreateSwapchain(const vk::raii::SurfaceKHR& surface, const std::vector<uint32_t>& queueFamilyIndices,
+                                const vk::raii::Device& device)
+{
+    swapchain.clear();
+    images.clear();
+    imageViews.clear();
+
+    swapchain = createSwapchain(surface, queueFamilyIndices, device);
+    images = createSwapchainImages();
+    imageViews = createImageViews(device);
+}
+
 vk::SurfaceFormatKHR SwapchainManager::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
 {
     for (const vk::SurfaceFormatKHR& availableFormat : availableFormats)
@@ -105,13 +132,22 @@ vk::raii::SwapchainKHR SwapchainManager::createSwapchain(const vk::raii::Surface
 
 std::vector<vk::Image> SwapchainManager::createSwapchainImages() const
 {
-    return swapchain.getImages();
+    try
+    {
+        return swapchain.getImages();
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to get swapchain images with error code: " + std::to_string(error.code().value()));
+    }
 }
 
 std::vector<vk::raii::ImageView> SwapchainManager::createImageViews(const vk::raii::Device& device) const
 {
     std::vector<vk::raii::ImageView> imageViews;
-    for (const auto image : images)
+    imageViews.reserve(images.size());
+
+    for (const auto& image : images)
     {
         const vk::ImageViewCreateInfo createInfo{
             .image = image,
@@ -135,6 +171,7 @@ std::vector<vk::raii::ImageView> SwapchainManager::createImageViews(const vk::ra
         try
         {
             imageViews.emplace_back(device.createImageView(createInfo));
+            const vk::raii::ImageView imageView = device.createImageView(createInfo);
         }
         catch (const vk::SystemError& error)
         {

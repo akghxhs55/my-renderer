@@ -17,12 +17,20 @@ public:
 
     GLFWwindow* const glfwWindow;
     const vk::raii::SurfaceKHR surface;
+private:
+    bool framebufferResized = false;
 
+public:
     explicit Window(const vk::raii::Instance& instance);
     ~Window();
 
+    bool wasFramebufferResized() const;
+    void resetFramebufferResized();
+
+    bool shouldClose() const;
+
 private:
-    static GLFWwindow* createGlfwWindow();
+    GLFWwindow* createGlfwWindow();
     vk::raii::SurfaceKHR createSurface(const vk::raii::Instance& instance) const;
 };
 

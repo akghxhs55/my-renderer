@@ -8,11 +8,27 @@ RenderPipeline::RenderPipeline(const vk::raii::Device& device, const SwapchainMa
     pipelineLayout(createPipelineLayout(device)),
     renderPass(createRenderPass(device, swapchainData.surfaceFormat.format)),
     pipeline(createPipeline(device, swapchainData.extent)),
-    swapchainFramebuffers(createFramebuffers(device, swapchainData))
+    swapchainFramebuffers(createSwapchainFramebuffers(device, swapchainData))
 {
 }
 
 RenderPipeline::~RenderPipeline() = default;
+
+const std::vector<vk::raii::Framebuffer>& RenderPipeline::getSwapchainFramebuffers() const
+{
+    return swapchainFramebuffers;
+}
+
+void RenderPipeline::clearSwapchainFramebuffers()
+{
+    swapchainFramebuffers.clear();
+}
+
+void RenderPipeline::resetSwapchainFramebuffers(const vk::raii::Device& device,
+                                                const SwapchainManager& swapchainManager)
+{
+    swapchainFramebuffers = createSwapchainFramebuffers(device, swapchainManager);
+}
 
 vk::raii::PipelineLayout RenderPipeline::createPipelineLayout(const vk::raii::Device& device)
 {
@@ -221,10 +237,12 @@ vk::raii::Pipeline RenderPipeline::createPipeline(const vk::raii::Device& device
     }
 }
 
-std::vector<vk::raii::Framebuffer> RenderPipeline::createFramebuffers(const vk::raii::Device& device, const SwapchainManager& swapchainManager) const
+std::vector<vk::raii::Framebuffer> RenderPipeline::createSwapchainFramebuffers(const vk::raii::Device& device, const SwapchainManager& swapchainManager) const
 {
     std::vector<vk::raii::Framebuffer> framebuffers;
-    for (const auto& imageView : swapchainManager.imageViews)
+    framebuffers.reserve(swapchainManager.getImageViews().size());
+
+    for (const auto& imageView : swapchainManager.getImageViews())
     {
         const vk::FramebufferCreateInfo createInfo{
             .renderPass = *renderPass,
@@ -237,7 +255,7 @@ std::vector<vk::raii::Framebuffer> RenderPipeline::createFramebuffers(const vk::
 
         try
         {
-            framebuffers.emplace_back(device.createFramebuffer(createInfo));
+            framebuffers.emplace_back(device, createInfo);
         }
         catch (const vk::SystemError& error)
         {

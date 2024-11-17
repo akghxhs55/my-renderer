@@ -29,7 +29,7 @@ void CommandBufferManager::recordCommandBuffer(const uint32_t& frameIndex, const
 
     const vk::RenderPassBeginInfo renderPassBeginInfo{
         .renderPass = *renderPipeline.renderPass,
-        .framebuffer = *renderPipeline.swapchainFramebuffers[imageIndex],
+        .framebuffer = *renderPipeline.getSwapchainFramebuffers()[imageIndex],
         .renderArea = {
             .offset = { 0, 0 },
             .extent = swapchainExtent
