@@ -1,18 +1,27 @@
 #include "render_pipeline.h"
 
 
+#include "vertex.h"
+
 #include <fstream>
 
 
-RenderPipeline::RenderPipeline(const vk::raii::Device& device, const SwapchainManager& swapchainData) :
-    pipelineLayout(createPipelineLayout(device)),
-    renderPass(createRenderPass(device, swapchainData.surfaceFormat.format)),
-    pipeline(createPipeline(device, swapchainData.extent)),
-    swapchainFramebuffers(createSwapchainFramebuffers(device, swapchainData))
+RenderPipeline::RenderPipeline(const vk::raii::Device& device, const SwapchainManager& swapchainManager) :
+    device(device),
+    swapchainManager(swapchainManager),
+    pipelineLayout(createPipelineLayout()),
+    renderPass(createRenderPass()),
+    pipeline(createPipeline()),
+    swapchainFramebuffers(createSwapchainFramebuffers())
 {
 }
 
 RenderPipeline::~RenderPipeline() = default;
+
+const vk::raii::Framebuffer& RenderPipeline::getSwapchainFramebuffer(const uint32_t& index) const
+{
+    return swapchainFramebuffers[index];
+}
 
 const std::vector<vk::raii::Framebuffer>& RenderPipeline::getSwapchainFramebuffers() const
 {
@@ -24,13 +33,12 @@ void RenderPipeline::clearSwapchainFramebuffers()
     swapchainFramebuffers.clear();
 }
 
-void RenderPipeline::resetSwapchainFramebuffers(const vk::raii::Device& device,
-                                                const SwapchainManager& swapchainManager)
+void RenderPipeline::recreateSwapchainFramebuffers()
 {
-    swapchainFramebuffers = createSwapchainFramebuffers(device, swapchainManager);
+    swapchainFramebuffers = createSwapchainFramebuffers();
 }
 
-vk::raii::PipelineLayout RenderPipeline::createPipelineLayout(const vk::raii::Device& device)
+vk::raii::PipelineLayout RenderPipeline::createPipelineLayout() const
 {
     constexpr vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo{
         .setLayoutCount = 0,
@@ -49,11 +57,10 @@ vk::raii::PipelineLayout RenderPipeline::createPipelineLayout(const vk::raii::De
     }
 }
 
-vk::raii::RenderPass RenderPipeline::createRenderPass(const vk::raii::Device& device,
-    const vk::Format& swapchainImageFormat)
+vk::raii::RenderPass RenderPipeline::createRenderPass() const
 {
     const vk::AttachmentDescription colorAttachmentDescription{
-        .format = swapchainImageFormat,
+        .format = swapchainManager.surfaceFormat.format,
         .samples = vk::SampleCountFlagBits::e1,
         .loadOp = vk::AttachmentLoadOp::eClear,
         .storeOp = vk::AttachmentStoreOp::eStore,
@@ -103,10 +110,10 @@ vk::raii::RenderPass RenderPipeline::createRenderPass(const vk::raii::Device& de
     }
 }
 
-vk::raii::Pipeline RenderPipeline::createPipeline(const vk::raii::Device& device, const vk::Extent2D& extent) const
+vk::raii::Pipeline RenderPipeline::createPipeline() const
 {
     const auto vertShaderCode = readFile("../shaders/vertex.spv");
-    const vk::raii::ShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
+    const vk::raii::ShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     const vk::PipelineShaderStageCreateInfo vertShaderStageCreateInfo{
         .stage = vk::ShaderStageFlagBits::eVertex,
         .module = *vertShaderModule,
@@ -115,7 +122,7 @@ vk::raii::Pipeline RenderPipeline::createPipeline(const vk::raii::Device& device
     };
 
     const auto fragShaderCode = readFile("../shaders/fragment.spv");
-    const vk::raii::ShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
+    const vk::raii::ShaderModule fragShaderModule = createShaderModule(fragShaderCode);
     const vk::PipelineShaderStageCreateInfo fragShaderStageCreateInfo{
         .stage = vk::ShaderStageFlagBits::eFragment,
         .module = *fragShaderModule,
@@ -125,11 +132,14 @@ vk::raii::Pipeline RenderPipeline::createPipeline(const vk::raii::Device& device
 
     const std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = { vertShaderStageCreateInfo, fragShaderStageCreateInfo };
 
-    constexpr vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo{
-        .vertexBindingDescriptionCount = 0,
-        .pVertexBindingDescriptions = nullptr,
-        .vertexAttributeDescriptionCount = 0,
-        .pVertexAttributeDescriptions = nullptr
+    const vk::VertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
+    const auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+    const vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo{
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &bindingDescription,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
+        .pVertexAttributeDescriptions = attributeDescriptions.data()
     };
 
     constexpr vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{
@@ -140,14 +150,14 @@ vk::raii::Pipeline RenderPipeline::createPipeline(const vk::raii::Device& device
     const vk::Viewport viewport{
         .x = 0.0f,
         .y = 0.0f,
-        .width = static_cast<float>(extent.width),
-        .height = static_cast<float>(extent.height),
+        .width = static_cast<float>(swapchainManager.extent.width),
+        .height = static_cast<float>(swapchainManager.extent.height),
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
     const vk::Rect2D scissor{
         .offset = { 0, 0 },
-        .extent = extent
+        .extent = swapchainManager.extent
     };
 
     const vk::PipelineViewportStateCreateInfo viewportStateCreateInfo{
@@ -237,7 +247,7 @@ vk::raii::Pipeline RenderPipeline::createPipeline(const vk::raii::Device& device
     }
 }
 
-std::vector<vk::raii::Framebuffer> RenderPipeline::createSwapchainFramebuffers(const vk::raii::Device& device, const SwapchainManager& swapchainManager) const
+std::vector<vk::raii::Framebuffer> RenderPipeline::createSwapchainFramebuffers() const
 {
     std::vector<vk::raii::Framebuffer> framebuffers;
     framebuffers.reserve(swapchainManager.getImageViews().size());
@@ -285,7 +295,7 @@ std::vector<char> RenderPipeline::readFile(const std::string& filename)
     return buffer;
 }
 
-vk::raii::ShaderModule RenderPipeline::createShaderModule(const vk::raii::Device& device, const std::vector<char>& code)
+vk::raii::ShaderModule RenderPipeline::createShaderModule(const std::vector<char>& code) const
 {
     const vk::ShaderModuleCreateInfo createInfo{
         .codeSize = code.size(),

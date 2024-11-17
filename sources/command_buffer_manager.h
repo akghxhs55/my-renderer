@@ -14,15 +14,16 @@ private:
 public:
     const std::vector<vk::raii::CommandBuffer> commandBuffers;
 
-    CommandBufferManager(const uint32_t& maxFramesInFlight, const vk::raii::Device& device, const uint32_t& queueFamilyIndex);
+    CommandBufferManager(const vk::raii::Device& device, const uint32_t& queueFamilyIndex, const uint32_t& maxFramesInFlight);
     ~CommandBufferManager();
 
-    void recordCommandBuffer(const uint32_t& frameIndex, const uint32_t& imageIndex, const RenderPipeline& renderPipeline,
-                const vk::Extent2D& swapchainExtent) const;
+    void resetCommandBuffer(const uint32_t& index) const;
+    void recordCommandBuffer(const uint32_t& bufferIndex, const RenderPipeline& renderPipeline, const uint32_t& imageIndex,
+                const vk::Extent2D& swapchainExtent, const std::vector<vk::Buffer>& vertexBuffers, const uint32_t& vertexCount) const;
 
 private:
     static vk::raii::CommandPool createCommandPool(const vk::raii::Device& device, const uint32_t& queueFamilyIndex);
-    std::vector<vk::raii::CommandBuffer> createCommandBuffers(const uint32_t& maxFramesInFlight, const vk::raii::Device& device) const;
+    std::vector<vk::raii::CommandBuffer> createCommandBuffers(const vk::raii::Device& device, const uint32_t& maxFramesInFlight) const;
 };
 
 

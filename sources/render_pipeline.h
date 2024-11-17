@@ -9,6 +9,9 @@
 
 
 class RenderPipeline {
+private:
+    const vk::raii::Device& device;
+    const SwapchainManager& swapchainManager;
 public:
     const vk::raii::PipelineLayout pipelineLayout;
     const vk::raii::RenderPass renderPass;
@@ -17,23 +20,23 @@ private:
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
 
 public:
-    RenderPipeline(const vk::raii::Device& device, const SwapchainManager& swapchainData);
+    RenderPipeline(const vk::raii::Device& device, const SwapchainManager& swapchainManager);
     ~RenderPipeline();
 
+    const vk::raii::Framebuffer& getSwapchainFramebuffer(const uint32_t& index) const;
     const std::vector<vk::raii::Framebuffer>& getSwapchainFramebuffers() const;
 
     void clearSwapchainFramebuffers();
-    void resetSwapchainFramebuffers(const vk::raii::Device& device, const SwapchainManager& swapchainManager);
+    void recreateSwapchainFramebuffers();
 
 private:
-
-    static vk::raii::PipelineLayout createPipelineLayout(const vk::raii::Device& device);
-    static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);
-    vk::raii::Pipeline createPipeline(const vk::raii::Device& device, const vk::Extent2D& extent) const;
-    std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const vk::raii::Device& device, const SwapchainManager& swapchainManager) const;
+    vk::raii::PipelineLayout createPipelineLayout() const;
+    vk::raii::RenderPass createRenderPass() const;
+    vk::raii::Pipeline createPipeline() const;
+    std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers() const;
 
     static std::vector<char> readFile(const std::string& filename);
-    static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);
+    vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 };
 
 

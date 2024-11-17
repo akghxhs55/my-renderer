@@ -13,6 +13,10 @@
 
 
 class SwapchainManager {
+private:
+    const vk::raii::Device& device;
+    const vk::raii::SurfaceKHR& surface;
+    const std::vector<uint32_t>& queueFamilyIndices;
 public:
     const vk::SurfaceCapabilitiesKHR capabilities;
     const vk::SurfaceFormatKHR surfaceFormat;
@@ -31,16 +35,15 @@ public:
     const std::vector<vk::Image>& getImages() const;
     const std::vector<vk::raii::ImageView>& getImageViews() const;
 
-    void recreateSwapchain(const vk::raii::SurfaceKHR& surface, const std::vector<uint32_t>& queueFamilyIndices, const vk::raii::Device& device);
+    void recreateSwapchain();
 
 private:
     static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
     static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
     vk::Extent2D chooseSwapchainExtent(const GLFWwindow* glfwWindow) const;
-    vk::raii::SwapchainKHR createSwapchain(const vk::raii::SurfaceKHR& surface, const std::vector<uint32_t>& queueFamilyIndices,
-                                           const vk::raii::Device& device) const;
+    vk::raii::SwapchainKHR createSwapchain() const;
     std::vector<vk::Image> createSwapchainImages() const;
-    std::vector<vk::raii::ImageView> createImageViews(const vk::raii::Device& device) const;
+    std::vector<vk::raii::ImageView> createImageViews() const;
 
 };
 

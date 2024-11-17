@@ -12,6 +12,7 @@ add_executable(my_renderer sources/main.cpp
         sources/device_manager.cpp sources/device_manager.h
         sources/render_pipeline.cpp sources/render_pipeline.h
         sources/command_buffer_manager.cpp sources/command_buffer_manager.h
+        sources/vertex.cpp sources/vertex.h
 )
 
 find_package(VulkanLoader REQUIRED)

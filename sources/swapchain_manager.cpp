@@ -5,13 +5,16 @@
 
 
 SwapchainManager::SwapchainManager(const Window& window, const PhysicalDeviceManager& physicalDeviceManager, const vk::raii::Device& device) :
-    capabilities(physicalDeviceManager.getSurfaceCapabilities(window.surface)),
-    surfaceFormat(chooseSwapSurfaceFormat(physicalDeviceManager.getSurfaceFormats(window.surface))),
-    presentMode(chooseSwapPresentMode(physicalDeviceManager.getSurfacePresentModes(window.surface))),
+    device(device),
+    surface(window.surface),
+    queueFamilyIndices(std::move(physicalDeviceManager.getQueueFamilyIndices())),
+    capabilities(physicalDeviceManager.getSurfaceCapabilities(surface)),
+    surfaceFormat(chooseSwapSurfaceFormat(physicalDeviceManager.getSurfaceFormats(surface))),
+    presentMode(chooseSwapPresentMode(physicalDeviceManager.getSurfacePresentModes(surface))),
     extent(chooseSwapchainExtent(window.glfwWindow)),
-    swapchain(createSwapchain(window.surface, physicalDeviceManager.getQueueFamilyIndices(), device)),
+    swapchain(createSwapchain()),
     images(createSwapchainImages()),
-    imageViews(createImageViews(device))
+    imageViews(createImageViews())
 {
 }
 
@@ -32,16 +35,15 @@ const std::vector<vk::raii::ImageView>& SwapchainManager::getImageViews() const
     return imageViews;
 }
 
-void SwapchainManager::recreateSwapchain(const vk::raii::SurfaceKHR& surface, const std::vector<uint32_t>& queueFamilyIndices,
-                                const vk::raii::Device& device)
+void SwapchainManager::recreateSwapchain()
 {
     swapchain.clear();
     images.clear();
     imageViews.clear();
 
-    swapchain = createSwapchain(surface, queueFamilyIndices, device);
+    swapchain = createSwapchain();
     images = createSwapchainImages();
-    imageViews = createImageViews(device);
+    imageViews = createImageViews();
 }
 
 vk::SurfaceFormatKHR SwapchainManager::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
@@ -91,9 +93,7 @@ vk::Extent2D SwapchainManager::chooseSwapchainExtent(const GLFWwindow* glfwWindo
     return extent;
 }
 
-vk::raii::SwapchainKHR SwapchainManager::createSwapchain(const vk::raii::SurfaceKHR& surface,
-                                                      const std::vector<uint32_t>& queueFamilyIndices,
-                                                      const vk::raii::Device& device) const
+vk::raii::SwapchainKHR SwapchainManager::createSwapchain() const
 {
     uint32_t imageCount = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 and
@@ -142,7 +142,7 @@ std::vector<vk::Image> SwapchainManager::createSwapchainImages() const
     }
 }
 
-std::vector<vk::raii::ImageView> SwapchainManager::createImageViews(const vk::raii::Device& device) const
+std::vector<vk::raii::ImageView> SwapchainManager::createImageViews() const
 {
     std::vector<vk::raii::ImageView> imageViews;
     imageViews.reserve(images.size());

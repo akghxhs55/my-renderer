@@ -6,7 +6,7 @@
 - [x] Create Render Pass
 - [x] Create Graphics Pipeline
 - [x] Implement Drawing
-- [ ] Create Vertex Buffer
+- [x] Create Vertex Buffer
 - [ ] Create Index Buffer
 - [ ] Create Texture
 - [ ] Implement Model Loading

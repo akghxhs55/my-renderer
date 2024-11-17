@@ -1,19 +1,29 @@
 #include "my_renderer.h"
 
+#include <iostream>
+
 
 MyRenderer::MyRenderer() :
     environment(ApplicationName, ApplicationVersion),
     window(environment.instance),
     physicalDeviceManager(environment.instance, window.surface),
     deviceManager(physicalDeviceManager),
+    vertexBuffer(createBuffer(Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)),
+    vertexBufferMemory(createDeviceMemory(vertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)),
     swapchainManager(window, physicalDeviceManager, deviceManager.device),
     renderPipeline(deviceManager.device, swapchainManager),
-    commandBufferManager(MaxFramesInFlight, deviceManager.device, physicalDeviceManager.graphicsQueueFamilyIndex),
+    commandBufferManager(deviceManager.device, physicalDeviceManager.graphicsQueueFamilyIndex, MaxFramesInFlight),
     currentFrame(0),
     imageAvailableSemaphore(createSemaphores(deviceManager.device)),
     renderFinishedSemaphore(createSemaphores(deviceManager.device)),
     inFlightFence(createFences(deviceManager.device, vk::FenceCreateFlagBits::eSignaled))
 {
+    vertexBuffer.bindMemory(vertexBufferMemory, 0);
+
+    void* data = vertexBufferMemory.mapMemory(0, Vertex::Size * vertices.size());
+    std::memcpy(data, vertices.data(), Vertex::Size * vertices.size());
+
+    vertexBufferMemory.unmapMemory();
 }
 
 MyRenderer::~MyRenderer() = default;
@@ -27,6 +37,43 @@ void MyRenderer::run()
     }
 
     deviceManager.device.waitIdle();
+}
+
+vk::raii::Buffer MyRenderer::createBuffer(const vk::DeviceSize& size, const vk::BufferUsageFlags& usage) const
+{
+    const vk::BufferCreateInfo createInfo{
+        .size = size,
+        .usage = usage,
+        .sharingMode = vk::SharingMode::eExclusive
+    };
+
+    try
+    {
+        return deviceManager.device.createBuffer(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create buffer with error code: " + std::to_string(error.code().value()));
+    }
+}
+
+vk::raii::DeviceMemory MyRenderer::createDeviceMemory(const vk::raii::Buffer& buffer, const vk::MemoryPropertyFlags& properties) const
+{
+    const vk::MemoryRequirements memoryRequirements = buffer.getMemoryRequirements();
+
+    const vk::MemoryAllocateInfo allocateInfo{
+        .allocationSize = memoryRequirements.size,
+        .memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties)
+    };
+
+    try
+    {
+        return deviceManager.device.allocateMemory(allocateInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to allocate memory with error code: " + std::to_string(error.code().value()));
+    }
 }
 
 std::vector<vk::raii::Semaphore> MyRenderer::createSemaphores(const vk::raii::Device& device)
@@ -69,6 +116,22 @@ std::vector<vk::raii::Fence> MyRenderer::createFences(const vk::raii::Device& de
     return fences;
 }
 
+uint32_t MyRenderer::findMemoryType(uint32_t typeFilter, const vk::MemoryPropertyFlags& properties) const
+{
+    const vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDeviceManager.physicalDevice.getMemoryProperties();
+
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+    {
+        if ((typeFilter & (1 << i)) and
+            (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("Failed to find suitable memory type");
+}
+
 void MyRenderer::drawFrame()
 {
     if (const vk::Result result = deviceManager.device.waitForFences(*inFlightFence[currentFrame], vk::True, std::numeric_limits<uint64_t>::max()); result != vk::Result::eSuccess)
@@ -89,8 +152,8 @@ void MyRenderer::drawFrame()
 
     deviceManager.device.resetFences(*inFlightFence[currentFrame]);
 
-    commandBufferManager.commandBuffers[currentFrame].reset();
-    commandBufferManager.recordCommandBuffer(currentFrame, imageIndex, renderPipeline, swapchainManager.extent);
+    commandBufferManager.resetCommandBuffer(currentFrame);
+    commandBufferManager.recordCommandBuffer(currentFrame, renderPipeline, imageIndex, swapchainManager.extent, { *vertexBuffer }, vertices.size());
 
     const std::array<vk::Semaphore, 1> waitSemaphores = { *imageAvailableSemaphore[currentFrame] };
     constexpr std::array<vk::PipelineStageFlags, 1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
@@ -142,6 +205,6 @@ void MyRenderer::recreateSwapchain()
 {
     deviceManager.device.waitIdle();
     renderPipeline.clearSwapchainFramebuffers();
-    swapchainManager.recreateSwapchain(window.surface, physicalDeviceManager.getQueueFamilyIndices(), deviceManager.device);
-    renderPipeline.resetSwapchainFramebuffers(deviceManager.device, swapchainManager);
+    swapchainManager.recreateSwapchain();
+    renderPipeline.recreateSwapchainFramebuffers();
 }
