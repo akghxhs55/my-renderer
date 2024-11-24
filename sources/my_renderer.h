@@ -5,12 +5,13 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
-#include "environment.h"
 #include "window.h"
+#include "environment.h"
 #include "device_context.h"
 #include "swapchain_context.h"
 #include "render_pipeline.h"
-#include "command_buffer_manager.h"
+#include "buffer_resource.h"
+#include "command_manager.h"
 #include "vertex.h"
 
 
@@ -44,23 +45,18 @@ private:
     Environment environment;
     vk::raii::SurfaceKHR surface;
     DeviceContext deviceContext;
-    vk::raii::Buffer vertexBuffer;
-    vk::raii::DeviceMemory vertexBufferMemory;
     SwapchainContext swapchainContext;
     RenderPipeline renderPipeline;
-    CommandBufferManager commandBufferManager;
-    uint32_t currentFrame;
+    BufferResource vertexBufferResource;
+    CommandManager commandManager;
+    uint32_t currentFrameIndex;
     std::vector<vk::raii::Semaphore> imageAvailableSemaphore;
     std::vector<vk::raii::Semaphore> renderFinishedSemaphore;
     std::vector<vk::raii::Fence> inFlightFence;
 
     static vk::raii::SurfaceKHR createSurface(const vk::raii::Instance& instance, GLFWwindow* window);
-    vk::raii::Buffer createBuffer(const vk::DeviceSize& size, const vk::BufferUsageFlags& usage) const;
-    vk::raii::DeviceMemory createDeviceMemory(const vk::raii::Buffer& buffer, const vk::MemoryPropertyFlags& properties) const;
     static std::vector<vk::raii::Semaphore> createSemaphores(const vk::raii::Device& device);
     static std::vector<vk::raii::Fence> createFences(const vk::raii::Device& device, const vk::FenceCreateFlags& flags);
-
-    uint32_t findMemoryType(uint32_t typeFilter, const vk::MemoryPropertyFlags& properties) const;
 
     void drawFrame();
 

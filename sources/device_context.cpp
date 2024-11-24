@@ -63,7 +63,7 @@ vk::raii::Device DeviceContext::createDevice(const vk::raii::PhysicalDevice& phy
 
     try
     {
-        return vk::raii::Device(physicalDevice, createInfo);
+        return physicalDevice.createDevice(createInfo);
     }
     catch (const vk::SystemError& error)
     {

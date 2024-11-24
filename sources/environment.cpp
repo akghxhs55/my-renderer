@@ -55,7 +55,7 @@ vk::raii::Instance Environment::createInstance(const char* applicationName, cons
 
     try
     {
-        return vk::raii::Instance(context, createInfo);
+        return context.createInstance(createInfo);
     }
     catch (const vk::SystemError& error)
     {
