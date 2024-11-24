@@ -11,11 +11,13 @@
 
 class Environment {
 private:
-    const bool glfwInitialized;
     const vk::raii::Context context;
 public:
     const vk::raii::Instance instance;
+private:
+    const std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
 
+public:
     Environment(const char* applicationName, const uint32_t applicationVersion);
     ~Environment();
 
@@ -30,8 +32,6 @@ private:
     static constexpr std::array<const char*, 1> validationLayers = {
         "VK_LAYER_KHRONOS_validation"
     };
-
-    const std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
 
     vk::raii::Instance createInstance(const char* applicationName, const uint32_t applicationVersion) const;
     vk::raii::DebugUtilsMessengerEXT createDebugMessenger() const;

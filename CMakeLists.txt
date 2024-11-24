@@ -7,9 +7,8 @@ add_executable(my_renderer sources/main.cpp
         sources/my_renderer.cpp sources/my_renderer.h
         sources/window.cpp sources/window.h
         sources/environment.cpp sources/environment.h
-        sources/swapchain_manager.cpp sources/swapchain_manager.h
-        sources/physical_device_manager.cpp sources/physical_device_manager.h
-        sources/device_manager.cpp sources/device_manager.h
+        sources/swapchain_context.cpp sources/swapchain_context.h
+        sources/device_context.cpp sources/device_context.h
         sources/render_pipeline.cpp sources/render_pipeline.h
         sources/command_buffer_manager.cpp sources/command_buffer_manager.h
         sources/vertex.cpp sources/vertex.h

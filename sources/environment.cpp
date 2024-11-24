@@ -5,7 +5,6 @@
 
 
 Environment::Environment(const char* applicationName, const uint32_t applicationVersion) :
-    glfwInitialized(glfwInit() == GLFW_TRUE),
     context(),
     instance(createInstance(applicationName, applicationVersion)),
     debugMessenger(createDebugMessenger())
@@ -14,7 +13,6 @@ Environment::Environment(const char* applicationName, const uint32_t application
 
 Environment::~Environment()
 {
-    glfwTerminate();
 }
 
 vk::raii::Instance Environment::createInstance(const char* applicationName, const uint32_t applicationVersion) const
@@ -57,7 +55,7 @@ vk::raii::Instance Environment::createInstance(const char* applicationName, cons
 
     try
     {
-        return context.createInstance(createInfo);
+        return vk::raii::Instance(context, createInfo);
     }
     catch (const vk::SystemError& error)
     {

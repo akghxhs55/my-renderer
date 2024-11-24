@@ -1,5 +1,5 @@
-#ifndef SWAPCHAIN_MANAGER_H
-#define SWAPCHAIN_MANAGER_H
+#ifndef SWAPCHAIN_CONTEXT_H
+#define SWAPCHAIN_CONTEXT_H
 
 
 #define GLFW_INCLUDE_VULKAN
@@ -9,16 +9,15 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "window.h"
-#include "physical_device_manager.h"
+#include "device_context.h"
 
 
-class SwapchainManager {
+class SwapchainContext {
 private:
-    const vk::raii::Device& device;
+    const DeviceContext& deviceContext;
     const vk::raii::SurfaceKHR& surface;
-    const std::vector<uint32_t>& queueFamilyIndices;
+    const vk::SurfaceCapabilitiesKHR surfaceCapabilities;
 public:
-    const vk::SurfaceCapabilitiesKHR capabilities;
     const vk::SurfaceFormatKHR surfaceFormat;
     const vk::PresentModeKHR presentMode;
     const vk::Extent2D extent;
@@ -28,8 +27,8 @@ private:
     std::vector<vk::raii::ImageView> imageViews;
 
 public:
-    SwapchainManager(const Window& window, const PhysicalDeviceManager& physicalDeviceManager, const vk::raii::Device& device);
-    ~SwapchainManager();
+    SwapchainContext(const DeviceContext& deviceContext, const Window& window, const vk::raii::SurfaceKHR& surface);
+    ~SwapchainContext();
 
     const vk::raii::SwapchainKHR& getSwapchain() const;
     const std::vector<vk::Image>& getImages() const;
@@ -38,9 +37,9 @@ public:
     void recreateSwapchain();
 
 private:
-    static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
-    static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
-    vk::Extent2D chooseSwapchainExtent(const GLFWwindow* glfwWindow) const;
+    static vk::SurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
+    static vk::PresentModeKHR chooseSwapchainPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
+    vk::Extent2D chooseSwapchainExtent(const Window& window) const;
     vk::raii::SwapchainKHR createSwapchain() const;
     std::vector<vk::Image> createSwapchainImages() const;
     std::vector<vk::raii::ImageView> createImageViews() const;
@@ -48,4 +47,4 @@ private:
 };
 
 
-#endif //SWAPCHAIN_MANAGER_H
+#endif //SWAPCHAIN_CONTEXT_H

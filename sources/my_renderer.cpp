@@ -4,21 +4,21 @@
 
 
 MyRenderer::MyRenderer() :
+    window(WindowTitle, WindowWidth, WindowHeight),
     environment(ApplicationName, ApplicationVersion),
-    window(environment.instance),
-    physicalDeviceManager(environment.instance, window.surface),
-    deviceManager(physicalDeviceManager),
+    surface(createSurface(environment.instance, window.glfwWindow)),
+    deviceContext(environment.instance, surface, deviceExtensions),
     vertexBuffer(createBuffer(Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)),
     vertexBufferMemory(createDeviceMemory(vertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)),
-    swapchainManager(window, physicalDeviceManager, deviceManager.device),
-    renderPipeline(deviceManager.device, swapchainManager),
-    commandBufferManager(deviceManager.device, physicalDeviceManager.graphicsQueueFamilyIndex, MaxFramesInFlight),
+    swapchainContext(deviceContext, window, surface),
+    renderPipeline(deviceContext.device, swapchainContext),
+    commandBufferManager(deviceContext.device, deviceContext.graphicsQueueFamilyIndex, MaxFramesInFlight),
     currentFrame(0),
-    imageAvailableSemaphore(createSemaphores(deviceManager.device)),
-    renderFinishedSemaphore(createSemaphores(deviceManager.device)),
-    inFlightFence(createFences(deviceManager.device, vk::FenceCreateFlagBits::eSignaled))
+    imageAvailableSemaphore(createSemaphores(deviceContext.device)),
+    renderFinishedSemaphore(createSemaphores(deviceContext.device)),
+    inFlightFence(createFences(deviceContext.device, vk::FenceCreateFlagBits::eSignaled))
 {
-    vertexBuffer.bindMemory(vertexBufferMemory, 0);
+    vertexBuffer.bindMemory(*vertexBufferMemory, 0);
 
     void* data = vertexBufferMemory.mapMemory(0, Vertex::Size * vertices.size());
     std::memcpy(data, vertices.data(), Vertex::Size * vertices.size());
@@ -36,7 +36,21 @@ void MyRenderer::run()
         drawFrame();
     }
 
-    deviceManager.device.waitIdle();
+    deviceContext.device.waitIdle();
+}
+
+vk::raii::SurfaceKHR MyRenderer::createSurface(const vk::raii::Instance& instance, GLFWwindow* window)
+{
+    VkSurfaceKHR surface;
+    if (const VkResult result = glfwCreateWindowSurface(static_cast<VkInstance>(*instance), window, nullptr, &surface);
+        result == VK_SUCCESS)
+    {
+        return vk::raii::SurfaceKHR(instance, surface);
+    }
+    else
+    {
+        throw std::runtime_error("Failed to create window surface with error code: " + std::to_string(result));
+    }
 }
 
 vk::raii::Buffer MyRenderer::createBuffer(const vk::DeviceSize& size, const vk::BufferUsageFlags& usage) const
@@ -49,7 +63,8 @@ vk::raii::Buffer MyRenderer::createBuffer(const vk::DeviceSize& size, const vk::
 
     try
     {
-        return deviceManager.device.createBuffer(createInfo);
+        return deviceContext.device.createBuffer(createInfo);
+        vk::raii::Buffer(deviceContext.device, createInfo);
     }
     catch (const vk::SystemError& error)
     {
@@ -68,7 +83,7 @@ vk::raii::DeviceMemory MyRenderer::createDeviceMemory(const vk::raii::Buffer& bu
 
     try
     {
-        return deviceManager.device.allocateMemory(allocateInfo);
+        return deviceContext.device.allocateMemory(allocateInfo);
     }
     catch (const vk::SystemError& error)
     {
@@ -118,7 +133,7 @@ std::vector<vk::raii::Fence> MyRenderer::createFences(const vk::raii::Device& de
 
 uint32_t MyRenderer::findMemoryType(uint32_t typeFilter, const vk::MemoryPropertyFlags& properties) const
 {
-    const vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDeviceManager.physicalDevice.getMemoryProperties();
+    const vk::PhysicalDeviceMemoryProperties memoryProperties = deviceContext.physicalDevice.getMemoryProperties();
 
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
     {
@@ -134,12 +149,12 @@ uint32_t MyRenderer::findMemoryType(uint32_t typeFilter, const vk::MemoryPropert
 
 void MyRenderer::drawFrame()
 {
-    if (const vk::Result result = deviceManager.device.waitForFences(*inFlightFence[currentFrame], vk::True, std::numeric_limits<uint64_t>::max()); result != vk::Result::eSuccess)
+    if (const vk::Result result = deviceContext.device.waitForFences(*inFlightFence[currentFrame], vk::True, std::numeric_limits<uint64_t>::max()); result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to wait for fence with error code: " + vk::to_string(result));
     }
 
-    const auto& [acquireImageResult, imageIndex] = swapchainManager.getSwapchain().acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore[currentFrame], nullptr);
+    const auto& [acquireImageResult, imageIndex] = swapchainContext.getSwapchain().acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore[currentFrame], nullptr);
     if (acquireImageResult == vk::Result::eErrorOutOfDateKHR)
     {
         recreateSwapchain();
@@ -150,10 +165,10 @@ void MyRenderer::drawFrame()
         throw std::runtime_error("Failed to acquire next image with error code: " + vk::to_string(acquireImageResult));
     }
 
-    deviceManager.device.resetFences(*inFlightFence[currentFrame]);
+    deviceContext.device.resetFences(*inFlightFence[currentFrame]);
 
     commandBufferManager.resetCommandBuffer(currentFrame);
-    commandBufferManager.recordCommandBuffer(currentFrame, renderPipeline, imageIndex, swapchainManager.extent, { *vertexBuffer }, vertices.size());
+    commandBufferManager.recordCommandBuffer(currentFrame, renderPipeline, imageIndex, swapchainContext.extent, { *vertexBuffer }, vertices.size());
 
     const std::array<vk::Semaphore, 1> waitSemaphores = { *imageAvailableSemaphore[currentFrame] };
     constexpr std::array<vk::PipelineStageFlags, 1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
@@ -171,7 +186,7 @@ void MyRenderer::drawFrame()
 
     try
     {
-        deviceManager.graphicsQueue.submit(submitInfo, *inFlightFence[currentFrame]);
+        deviceContext.graphicsQueue.submit(submitInfo, *inFlightFence[currentFrame]);
     }
     catch (const vk::SystemError& error)
     {
@@ -182,12 +197,12 @@ void MyRenderer::drawFrame()
         .waitSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
         .pWaitSemaphores = signalSemaphores.data(),
         .swapchainCount = 1,
-        .pSwapchains = &(*swapchainManager.getSwapchain()),
+        .pSwapchains = &(*swapchainContext.getSwapchain()),
         .pImageIndices = &imageIndex,
         .pResults = nullptr
     };
 
-    const vk::Result presentResult = deviceManager.presentQueue.presentKHR(presentInfo);
+    const vk::Result presentResult = deviceContext.presentQueue.presentKHR(presentInfo);
     if (presentResult == vk::Result::eErrorOutOfDateKHR or presentResult == vk::Result::eSuboptimalKHR or window.wasFramebufferResized())
     {
         window.resetFramebufferResized();
@@ -203,8 +218,8 @@ void MyRenderer::drawFrame()
 
 void MyRenderer::recreateSwapchain()
 {
-    deviceManager.device.waitIdle();
+    deviceContext.device.waitIdle();
     renderPipeline.clearSwapchainFramebuffers();
-    swapchainManager.recreateSwapchain();
+    swapchainContext.recreateSwapchain();
     renderPipeline.recreateSwapchainFramebuffers();
 }

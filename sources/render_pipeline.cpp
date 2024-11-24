@@ -6,9 +6,9 @@
 #include <fstream>
 
 
-RenderPipeline::RenderPipeline(const vk::raii::Device& device, const SwapchainManager& swapchainManager) :
+RenderPipeline::RenderPipeline(const vk::raii::Device& device, const SwapchainContext& swapchainManager) :
     device(device),
-    swapchainManager(swapchainManager),
+    swapchainContext(swapchainManager),
     pipelineLayout(createPipelineLayout()),
     renderPass(createRenderPass()),
     pipeline(createPipeline()),
@@ -60,7 +60,7 @@ vk::raii::PipelineLayout RenderPipeline::createPipelineLayout() const
 vk::raii::RenderPass RenderPipeline::createRenderPass() const
 {
     const vk::AttachmentDescription colorAttachmentDescription{
-        .format = swapchainManager.surfaceFormat.format,
+        .format = swapchainContext.surfaceFormat.format,
         .samples = vk::SampleCountFlagBits::e1,
         .loadOp = vk::AttachmentLoadOp::eClear,
         .storeOp = vk::AttachmentStoreOp::eStore,
@@ -150,14 +150,14 @@ vk::raii::Pipeline RenderPipeline::createPipeline() const
     const vk::Viewport viewport{
         .x = 0.0f,
         .y = 0.0f,
-        .width = static_cast<float>(swapchainManager.extent.width),
-        .height = static_cast<float>(swapchainManager.extent.height),
+        .width = static_cast<float>(swapchainContext.extent.width),
+        .height = static_cast<float>(swapchainContext.extent.height),
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
     const vk::Rect2D scissor{
         .offset = { 0, 0 },
-        .extent = swapchainManager.extent
+        .extent = swapchainContext.extent
     };
 
     const vk::PipelineViewportStateCreateInfo viewportStateCreateInfo{
@@ -250,16 +250,16 @@ vk::raii::Pipeline RenderPipeline::createPipeline() const
 std::vector<vk::raii::Framebuffer> RenderPipeline::createSwapchainFramebuffers() const
 {
     std::vector<vk::raii::Framebuffer> framebuffers;
-    framebuffers.reserve(swapchainManager.getImageViews().size());
+    framebuffers.reserve(swapchainContext.getImageViews().size());
 
-    for (const auto& imageView : swapchainManager.getImageViews())
+    for (const auto& imageView : swapchainContext.getImageViews())
     {
         const vk::FramebufferCreateInfo createInfo{
             .renderPass = *renderPass,
             .attachmentCount = 1,
             .pAttachments = &(*imageView),
-            .width = swapchainManager.extent.width,
-            .height = swapchainManager.extent.height,
+            .width = swapchainContext.extent.width,
+            .height = swapchainContext.extent.height,
             .layers = 1
         };
 

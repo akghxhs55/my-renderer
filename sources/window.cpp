@@ -4,15 +4,23 @@
 #include <stdexcept>
 
 
-Window::Window(const vk::raii::Instance& instance) :
-    glfwWindow(createGlfwWindow()),
-    surface(createSurface(instance))
+Window::Window(const char* windowTitle, const int width, const int height) :
+    glfwWindow(createGlfwWindow(windowTitle, width, height))
 {
 }
 
 Window::~Window()
 {
     glfwDestroyWindow(glfwWindow);
+    glfwTerminate();
+}
+
+std::pair<int, int> Window::getFramebufferSize() const
+{
+    int width, height;
+    glfwGetFramebufferSize(glfwWindow, &width, &height);
+
+    return { width, height };
 }
 
 bool Window::wasFramebufferResized() const
@@ -30,11 +38,13 @@ bool Window::shouldClose() const
     return glfwWindowShouldClose(glfwWindow);
 }
 
-GLFWwindow* Window::createGlfwWindow()
+GLFWwindow* Window::createGlfwWindow(const char* windowTitle, const int width, const int height)
 {
+    glfwInit();
+
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    GLFWwindow* window = glfwCreateWindow(Width, Height, WindowTitle, nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(width, height, windowTitle, nullptr, nullptr);
     if (window == nullptr)
     {
         throw std::runtime_error("Failed to create GLFW window.");
@@ -48,18 +58,4 @@ GLFWwindow* Window::createGlfwWindow()
     });
 
     return window;
-}
-
-vk::raii::SurfaceKHR Window::createSurface(const vk::raii::Instance& instance) const
-{
-    VkSurfaceKHR surface;
-    if (const VkResult result = glfwCreateWindowSurface(static_cast<VkInstance>(*instance), glfwWindow, nullptr, &surface);
-        result == VK_SUCCESS)
-    {
-        return vk::raii::SurfaceKHR(instance, surface);
-    }
-    else
-    {
-        throw std::runtime_error("Failed to create window surface with error code: " + std::to_string(result));
-    }
 }

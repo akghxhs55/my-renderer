@@ -5,22 +5,22 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
-#include "swapchain_manager.h"
+#include "swapchain_context.h"
 
 
 class RenderPipeline {
 private:
     const vk::raii::Device& device;
-    const SwapchainManager& swapchainManager;
-public:
+    const SwapchainContext& swapchainContext;
     const vk::raii::PipelineLayout pipelineLayout;
+public:
     const vk::raii::RenderPass renderPass;
     const vk::raii::Pipeline pipeline;
 private:
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
 
 public:
-    RenderPipeline(const vk::raii::Device& device, const SwapchainManager& swapchainManager);
+    RenderPipeline(const vk::raii::Device& device, const SwapchainContext& swapchainManager);
     ~RenderPipeline();
 
     const vk::raii::Framebuffer& getSwapchainFramebuffer(const uint32_t& index) const;

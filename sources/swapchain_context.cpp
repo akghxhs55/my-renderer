@@ -1,41 +1,37 @@
-#include "swapchain_manager.h"
+#include "swapchain_context.h"
 
 
-#include <iostream>
-
-
-SwapchainManager::SwapchainManager(const Window& window, const PhysicalDeviceManager& physicalDeviceManager, const vk::raii::Device& device) :
-    device(device),
-    surface(window.surface),
-    queueFamilyIndices(std::move(physicalDeviceManager.getQueueFamilyIndices())),
-    capabilities(physicalDeviceManager.getSurfaceCapabilities(surface)),
-    surfaceFormat(chooseSwapSurfaceFormat(physicalDeviceManager.getSurfaceFormats(surface))),
-    presentMode(chooseSwapPresentMode(physicalDeviceManager.getSurfacePresentModes(surface))),
-    extent(chooseSwapchainExtent(window.glfwWindow)),
+SwapchainContext::SwapchainContext(const DeviceContext& deviceContext, const Window& window, const vk::raii::SurfaceKHR& surface) :
+    deviceContext(deviceContext),
+    surface(surface),
+    surfaceCapabilities(deviceContext.surfaceCapabilities),
+    surfaceFormat(chooseSwapchainSurfaceFormat(deviceContext.surfaceFormats)),
+    presentMode(chooseSwapchainPresentMode(deviceContext.presentModes)),
+    extent(chooseSwapchainExtent(window)),
     swapchain(createSwapchain()),
     images(createSwapchainImages()),
     imageViews(createImageViews())
 {
 }
 
-SwapchainManager::~SwapchainManager() = default;
+SwapchainContext::~SwapchainContext() = default;
 
-const vk::raii::SwapchainKHR& SwapchainManager::getSwapchain() const
+const vk::raii::SwapchainKHR& SwapchainContext::getSwapchain() const
 {
     return swapchain;
 }
 
-const std::vector<vk::Image>& SwapchainManager::getImages() const
+const std::vector<vk::Image>& SwapchainContext::getImages() const
 {
     return images;
 }
 
-const std::vector<vk::raii::ImageView>& SwapchainManager::getImageViews() const
+const std::vector<vk::raii::ImageView>& SwapchainContext::getImageViews() const
 {
     return imageViews;
 }
 
-void SwapchainManager::recreateSwapchain()
+void SwapchainContext::recreateSwapchain()
 {
     swapchain.clear();
     images.clear();
@@ -46,7 +42,7 @@ void SwapchainManager::recreateSwapchain()
     imageViews = createImageViews();
 }
 
-vk::SurfaceFormatKHR SwapchainManager::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
+vk::SurfaceFormatKHR SwapchainContext::chooseSwapchainSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
 {
     for (const vk::SurfaceFormatKHR& availableFormat : availableFormats)
     {
@@ -60,7 +56,7 @@ vk::SurfaceFormatKHR SwapchainManager::chooseSwapSurfaceFormat(const std::vector
     return availableFormats[0];
 }
 
-vk::PresentModeKHR SwapchainManager::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
+vk::PresentModeKHR SwapchainContext::chooseSwapchainPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
 {
     for (const vk::PresentModeKHR& availablePresentMode : availablePresentModes)
     {
@@ -73,47 +69,46 @@ vk::PresentModeKHR SwapchainManager::chooseSwapPresentMode(const std::vector<vk:
     return vk::PresentModeKHR::eFifo;
 }
 
-vk::Extent2D SwapchainManager::chooseSwapchainExtent(const GLFWwindow* glfwWindow) const
+vk::Extent2D SwapchainContext::chooseSwapchainExtent(const Window& window) const
 {
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+    if (surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
     {
-        return capabilities.currentExtent;
+        return surfaceCapabilities.currentExtent;
     }
 
-    int width, height;
-    glfwGetFramebufferSize(const_cast<GLFWwindow*>(glfwWindow), &width, &height);
+    const auto [width, height] = window.getFramebufferSize();
 
     vk::Extent2D extent = {
         static_cast<uint32_t>(width),
         static_cast<uint32_t>(height)
     };
-    extent.width = std::clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-    extent.height = std::clamp(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+    extent.width = std::clamp(extent.width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+    extent.height = std::clamp(extent.height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
 
     return extent;
 }
 
-vk::raii::SwapchainKHR SwapchainManager::createSwapchain() const
+vk::raii::SwapchainKHR SwapchainContext::createSwapchain() const
 {
-    uint32_t imageCount = capabilities.minImageCount + 1;
-    if (capabilities.maxImageCount > 0 and
-        capabilities.maxImageCount < imageCount)
+    uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
+    if (surfaceCapabilities.maxImageCount > 0 and
+        surfaceCapabilities.maxImageCount < imageCount)
     {
-        imageCount = capabilities.maxImageCount;
+        imageCount = surfaceCapabilities.maxImageCount;
     }
 
     const vk::SwapchainCreateInfoKHR createInfo{
-        .surface = surface,
+        .surface = *surface,
         .minImageCount = imageCount,
         .imageFormat = surfaceFormat.format,
         .imageColorSpace = surfaceFormat.colorSpace,
         .imageExtent = extent,
         .imageArrayLayers = 1,
         .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
-        .imageSharingMode = queueFamilyIndices.size() <= 1 ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent,
-        .queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size()),
-        .pQueueFamilyIndices = queueFamilyIndices.data(),
-        .preTransform = capabilities.currentTransform,
+        .imageSharingMode = deviceContext.queueFamilyIndices.size() <= 1 ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent,
+        .queueFamilyIndexCount = static_cast<uint32_t>(deviceContext.queueFamilyIndices.size()),
+        .pQueueFamilyIndices = deviceContext.queueFamilyIndices.data(),
+        .preTransform = surfaceCapabilities.currentTransform,
         .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
         .presentMode = presentMode,
         .clipped = vk::True,
@@ -122,7 +117,7 @@ vk::raii::SwapchainKHR SwapchainManager::createSwapchain() const
 
     try
     {
-        return device.createSwapchainKHR(createInfo);
+        return deviceContext.device.createSwapchainKHR(createInfo);
     }
     catch (const vk::SystemError& error)
     {
@@ -130,7 +125,7 @@ vk::raii::SwapchainKHR SwapchainManager::createSwapchain() const
     }
 }
 
-std::vector<vk::Image> SwapchainManager::createSwapchainImages() const
+std::vector<vk::Image> SwapchainContext::createSwapchainImages() const
 {
     try
     {
@@ -142,7 +137,7 @@ std::vector<vk::Image> SwapchainManager::createSwapchainImages() const
     }
 }
 
-std::vector<vk::raii::ImageView> SwapchainManager::createImageViews() const
+std::vector<vk::raii::ImageView> SwapchainContext::createImageViews() const
 {
     std::vector<vk::raii::ImageView> imageViews;
     imageViews.reserve(images.size());
@@ -170,8 +165,8 @@ std::vector<vk::raii::ImageView> SwapchainManager::createImageViews() const
 
         try
         {
-            imageViews.emplace_back(device.createImageView(createInfo));
-            const vk::raii::ImageView imageView = device.createImageView(createInfo);
+            imageViews.emplace_back(deviceContext.device.createImageView(createInfo));
+            const vk::raii::ImageView imageView = deviceContext.device.createImageView(createInfo);
         }
         catch (const vk::SystemError& error)
         {
