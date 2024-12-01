@@ -7,13 +7,7 @@ add_executable(my_renderer sources/main.cpp
         sources/my_renderer.cpp sources/my_renderer.h
         sources/window.cpp sources/window.h
         sources/environment.cpp sources/environment.h
-        sources/swapchain_context.cpp sources/swapchain_context.h
-        sources/device_context.cpp sources/device_context.h
-        sources/render_pipeline.cpp sources/render_pipeline.h
-        sources/command_manager.cpp sources/command_manager.h
         sources/vertex.cpp sources/vertex.h
-        sources/buffer_resource.cpp
-        sources/buffer_resource.h
 )
 
 find_package(VulkanLoader REQUIRED)

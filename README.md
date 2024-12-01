@@ -1,14 +1,7 @@
-- [x] Create Instance
-- [x] Create Debug Utils Messenger
-- [x] Create Device and Queues
-- [x] Create Surface
-- [x] Create Swapchain and Image Views
-- [x] Create Render Pass
-- [x] Create Graphics Pipeline
-- [x] Implement Drawing
-- [x] Create Vertex Buffer
-- [ ] Create Index Buffer
-- [ ] Create Texture
+- [ ] Setup Vulkan
+- [ ] Implement Drawing
+- [ ] Implement Vertex Buffer and Index Buffer
+- [ ] Implement Texturing
 - [ ] Implement Model Loading
 - [ ] Implement Depth Testing
 - [ ] Implement Scene Graph
