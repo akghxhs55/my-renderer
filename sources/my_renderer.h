@@ -13,6 +13,7 @@ class MyRenderer {
 public:
     MyRenderer();
     ~MyRenderer();
+
     void run();
 
 private:

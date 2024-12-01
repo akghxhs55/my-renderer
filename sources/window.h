@@ -25,7 +25,7 @@ public:
     vk::raii::SurfaceKHR createSurface(const vk::raii::Instance& instance) const;
 
 private:
-    bool framebufferResized = false;
+    bool framebufferResized;
 
     GLFWwindow* createGlfwWindow(const char* windowTitle, const int width, const int height);
 };

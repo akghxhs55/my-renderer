@@ -14,8 +14,8 @@
 class Environment {
 private:
     struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
-        std::optional<uint32_t> presentFamily;
+        const std::optional<uint32_t> graphicsFamily;
+        const std::optional<uint32_t> presentFamily;
 
         bool isComplete() const
         {
@@ -37,8 +37,21 @@ private:
             return indices;
         }
     };
+    struct SwapchainDetails
+    {
+        const vk::SurfaceCapabilitiesKHR capabilities;
+        const std::vector<vk::SurfaceFormatKHR> formats;
+        const std::vector<vk::PresentModeKHR> presentModes;
+
+        bool isComplete() const
+        {
+            return !formats.empty() and
+                    !presentModes.empty();
+        }
+    };
 
 private:
+    const Window& window;
     const vk::raii::Context context;
 public:
     const vk::raii::Instance instance;
@@ -53,9 +66,13 @@ public:
     const vk::raii::Device device;
     const vk::raii::Queue graphicsQueue;
     const vk::raii::Queue presentQueue;
+    const vk::SurfaceFormatKHR swapchainSurfaceFormat;
+    const vk::Extent2D swapchainExtent;
+    const vk::raii::SwapchainKHR swapchain;
+    const std::vector<vk::Image> swapchainImages;
 
 public:
-    Environment(const char* applicationName, const uint32_t applicationVersion, const Window& window);
+    Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion);
     ~Environment();
 
     static constexpr auto EngineName = "No Engine";
@@ -77,6 +94,7 @@ public:
     vk::raii::DebugUtilsMessengerEXT createDebugMessenger() const;
     vk::raii::PhysicalDevice selectPhysicalDevice() const;
     vk::raii::Device createDevice() const;
+    vk::raii::SwapchainKHR createSwapchain() const;
 
     static std::vector<const char*> getRequiredExtensionNames();
     static vk::DebugUtilsMessengerCreateInfoEXT getDebugUtilsMessengerCreateInfo();
@@ -87,8 +105,12 @@ public:
         void* pUserData);
 
     bool isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const;
+    static bool checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice);
     QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) const;
-
+    SwapchainDetails querySwapchainSupport(const vk::raii::PhysicalDevice& physicalDevice) const;
+    static vk::SurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
+    static vk::PresentModeKHR chooseSwapchainPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
+    vk::Extent2D chooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const;
 };
 
 

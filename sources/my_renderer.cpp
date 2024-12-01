@@ -5,7 +5,7 @@
 
 MyRenderer::MyRenderer() :
     window(WindowTitle, WindowWidth, WindowHeight),
-    environment(ApplicationName, ApplicationVersion, window)
+    environment(window, ApplicationName, ApplicationVersion)
 {
 }
 

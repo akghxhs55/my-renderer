@@ -5,7 +5,8 @@
 
 
 Window::Window(const char* windowTitle, const int width, const int height) :
-    glfwWindow(createGlfwWindow(windowTitle, width, height))
+    glfwWindow(createGlfwWindow(windowTitle, width, height)),
+    framebufferResized(false)
 {
 }
 
