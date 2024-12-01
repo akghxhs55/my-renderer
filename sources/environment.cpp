@@ -10,7 +10,8 @@ Environment::Environment(const char* applicationName, const uint32_t application
     debugMessenger(createDebugMessenger()),
     physicalDevice(selectPhysicalDevice()),
     queueFamilyIndices(findQueueFamilies(physicalDevice)),
-    device(createDevice())
+    device(createDevice()),
+    graphicsQueue(device.getQueue(queueFamilyIndices.graphicsFamily.value(), 0))
 {
 }
 

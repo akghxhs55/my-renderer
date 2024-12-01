@@ -42,6 +42,7 @@ private:
     const QueueFamilyIndices queueFamilyIndices;
 public:
     const vk::raii::Device device;
+    const vk::raii::Queue graphicsQueue;
 
 public:
     Environment(const char* applicationName, const uint32_t applicationVersion);
