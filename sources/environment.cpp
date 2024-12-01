@@ -19,7 +19,8 @@ Environment::Environment(const Window& window, const char* applicationName, cons
     swapchainSurfaceFormat(chooseSwapchainSurfaceFormat(querySwapchainSupport(physicalDevice).formats)),
     swapchainExtent(chooseSwapchainExtent(querySwapchainSupport(physicalDevice).capabilities)),
     swapchain(createSwapchain()),
-    swapchainImages(swapchain.getImages())
+    swapchainImages(swapchain.getImages()),
+    swapchainImageViews(createSwapchainImageViews())
 {
 }
 
@@ -225,6 +226,43 @@ vk::raii::SwapchainKHR Environment::createSwapchain() const
     {
         throw std::runtime_error("Failed to create Vulkan swapchain.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
     }
+}
+
+std::vector<vk::raii::ImageView> Environment::createSwapchainImageViews() const
+{
+    std::vector<vk::raii::ImageView> swapchainImageViews;
+    for (const vk::Image& image : swapchainImages)
+    {
+        const vk::ImageViewCreateInfo createInfo{
+            .image = image,
+            .viewType = vk::ImageViewType::e2D,
+            .format = swapchainSurfaceFormat.format,
+            .components = {
+                .r = vk::ComponentSwizzle::eIdentity,
+                .g = vk::ComponentSwizzle::eIdentity,
+                .b = vk::ComponentSwizzle::eIdentity,
+                .a = vk::ComponentSwizzle::eIdentity
+            },
+            .subresourceRange = {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            }
+        };
+
+        try
+        {
+            swapchainImageViews.emplace_back(device.createImageView(createInfo));
+        }
+        catch (const vk::SystemError& error)
+        {
+            throw std::runtime_error("Failed to create Vulkan image view.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+        }
+    }
+
+    return swapchainImageViews;
 }
 
 bool Environment::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const

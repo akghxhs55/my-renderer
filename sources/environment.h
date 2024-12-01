@@ -70,6 +70,7 @@ public:
     const vk::Extent2D swapchainExtent;
     const vk::raii::SwapchainKHR swapchain;
     const std::vector<vk::Image> swapchainImages;
+    const std::vector<vk::raii::ImageView> swapchainImageViews;
 
 public:
     Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion);
@@ -95,6 +96,7 @@ public:
     vk::raii::PhysicalDevice selectPhysicalDevice() const;
     vk::raii::Device createDevice() const;
     vk::raii::SwapchainKHR createSwapchain() const;
+    std::vector<vk::raii::ImageView> createSwapchainImageViews() const;
 
     static std::vector<const char*> getRequiredExtensionNames();
     static vk::DebugUtilsMessengerCreateInfoEXT getDebugUtilsMessengerCreateInfo();
