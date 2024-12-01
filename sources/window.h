@@ -6,21 +6,23 @@
 #include <utility>
 #include <GLFW/glfw3.h>
 
+#define VULKAN_HPP_NO_CONSTRUCTORS
+#include <vulkan/vulkan_raii.hpp>
+
 
 class Window {
 public:
     GLFWwindow* const glfwWindow;
 
-public:
     Window(const char* windowTitle, const int width, const int height);
     ~Window();
 
     std::pair<int, int> getFramebufferSize() const;
-
+    bool shouldClose() const;
     bool wasFramebufferResized() const;
     void resetFramebufferResized();
 
-    bool shouldClose() const;
+    vk::raii::SurfaceKHR createSurface(const vk::raii::Instance& instance) const;
 
 private:
     bool framebufferResized = false;
