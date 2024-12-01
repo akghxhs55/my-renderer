@@ -5,8 +5,7 @@
 
 MyRenderer::MyRenderer() :
     window(WindowTitle, WindowWidth, WindowHeight),
-    environment(ApplicationName, ApplicationVersion),
-    surface(window.createSurface(environment.instance))
+    environment(ApplicationName, ApplicationVersion, window)
 {
 }
 

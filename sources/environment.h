@@ -8,15 +8,19 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
+#include "window.h"
+
 
 class Environment {
 private:
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
 
         bool isComplete() const
         {
-            return graphicsFamily.has_value();
+            return graphicsFamily.has_value() and
+                    presentFamily.has_value();
         }
 
         std::vector<uint32_t> getUniqueIndices() const
@@ -25,6 +29,10 @@ private:
             if (graphicsFamily.has_value())
             {
                 indices.push_back(graphicsFamily.value());
+            }
+            if (presentFamily.has_value() and presentFamily.value() != graphicsFamily.value())
+            {
+                indices.push_back(presentFamily.value());
             }
             return indices;
         }
@@ -37,15 +45,17 @@ public:
 private:
     const std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
 public:
+    const vk::raii::SurfaceKHR surface;
     const vk::raii::PhysicalDevice physicalDevice;
 private:
     const QueueFamilyIndices queueFamilyIndices;
 public:
     const vk::raii::Device device;
     const vk::raii::Queue graphicsQueue;
+    const vk::raii::Queue presentQueue;
 
 public:
-    Environment(const char* applicationName, const uint32_t applicationVersion);
+    Environment(const char* applicationName, const uint32_t applicationVersion, const Window& window);
     ~Environment();
 
     static constexpr auto EngineName = "No Engine";
@@ -76,8 +86,8 @@ public:
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);
 
-    static bool isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice);
-    static QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice);
+    bool isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const;
+    QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) const;
 
 };
 

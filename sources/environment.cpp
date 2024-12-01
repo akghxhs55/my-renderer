@@ -4,14 +4,16 @@
 #include <iostream>
 
 
-Environment::Environment(const char* applicationName, const uint32_t applicationVersion) :
+Environment::Environment(const char* applicationName, const uint32_t applicationVersion, const Window& window) :
     context(),
     instance(createInstance(applicationName, applicationVersion)),
     debugMessenger(createDebugMessenger()),
+    surface(window.createSurface(instance)),
     physicalDevice(selectPhysicalDevice()),
     queueFamilyIndices(findQueueFamilies(physicalDevice)),
     device(createDevice()),
-    graphicsQueue(device.getQueue(queueFamilyIndices.graphicsFamily.value(), 0))
+    graphicsQueue(device.getQueue(queueFamilyIndices.graphicsFamily.value(), 0)),
+    presentQueue(device.getQueue(queueFamilyIndices.presentFamily.value(), 0))
 {
 }
 
@@ -177,26 +179,48 @@ vk::raii::Device Environment::createDevice() const
     }
 }
 
-bool Environment::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice)
+bool Environment::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const
 {
     const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
     return indices.isComplete();
 }
 
-Environment::QueueFamilyIndices Environment::findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice)
+Environment::QueueFamilyIndices Environment::findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) const
 {
-    QueueFamilyIndices indices;
+    std::vector<uint32_t> graphicsFamilyIndices;
+    std::vector<uint32_t> presentFamilyIndices;
 
     const std::vector<vk::QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
-
     for (uint32_t i = 0; i < queueFamilies.size(); ++i)
     {
         if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
         {
-            indices.graphicsFamily = i;
+            graphicsFamilyIndices.push_back(i);
+        }
+
+        if (physicalDevice.getSurfaceSupportKHR(i, *surface))
+        {
+            presentFamilyIndices.push_back(i);
         }
     }
 
-    return indices;
+    for (uint32_t graphicsFamilyIndex : graphicsFamilyIndices)
+    {
+        for (uint32_t presentFamilyIndex : presentFamilyIndices)
+        {
+            if (graphicsFamilyIndex == presentFamilyIndex)
+            {
+                return QueueFamilyIndices{
+                    .graphicsFamily = graphicsFamilyIndex,
+                    .presentFamily = presentFamilyIndex
+                };
+            }
+        }
+    }
+
+    return QueueFamilyIndices{
+        .graphicsFamily = graphicsFamilyIndices.empty() ? std::nullopt : std::optional<uint32_t>(graphicsFamilyIndices[0]),
+        .presentFamily = presentFamilyIndices.empty() ? std::nullopt : std::optional<uint32_t>(presentFamilyIndices[0])
+    };
 }

@@ -30,7 +30,6 @@ private:
 
     Window window;
     Environment environment;
-    vk::raii::SurfaceKHR surface;
 
     void drawFrame();
 };
