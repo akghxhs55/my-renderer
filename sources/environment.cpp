@@ -26,6 +26,34 @@ Environment::Environment(const Window& window, const char* applicationName, cons
 
 Environment::~Environment() = default;
 
+std::vector<vk::raii::Framebuffer> Environment::createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const
+{
+    std::vector<vk::raii::Framebuffer> framebuffers;
+    framebuffers.reserve(swapchainImageViews.size());
+    for (const vk::raii::ImageView& imageView : swapchainImageViews)
+    {
+        const vk::FramebufferCreateInfo createInfo{
+            .renderPass = *renderPass,
+            .attachmentCount = 1,
+            .pAttachments = &*imageView,
+            .width = swapchainExtent.width,
+            .height = swapchainExtent.height,
+            .layers = 1
+        };
+
+        try
+        {
+            framebuffers.emplace_back(device, createInfo);
+        }
+        catch (const vk::SystemError& error)
+        {
+            throw std::runtime_error("Failed to create Vulkan framebuffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+        }
+    }
+
+    return framebuffers;
+}
+
 vk::raii::Instance Environment::createInstance(const char* applicationName, const uint32_t applicationVersion) const
 {
     void* pNext = nullptr;

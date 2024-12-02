@@ -31,8 +31,20 @@ private:
 
     Window window;
     Environment environment;
+    const vk::raii::PipelineLayout pipelineLayout;
+    const vk::raii::RenderPass renderPass;
+    std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
+    const vk::raii::Pipeline graphicsPipeline;
 
     void drawFrame();
+
+    static vk::raii::PipelineLayout createPipelineLayout(const vk::raii::Device& device);
+    static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);
+    static vk::raii::Pipeline createGraphicsPipeline(const vk::raii::Device& device, const vk::raii::PipelineLayout& pipelineLayout,
+        const vk::raii::RenderPass& renderPass, const vk::Extent2D& swapchainExtent);
+    static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);
+
+    static std::vector<char> readFile(const std::string& filename);
 };
 
 

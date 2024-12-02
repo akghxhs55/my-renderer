@@ -76,6 +76,9 @@ public:
     Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion);
     ~Environment();
 
+    std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const;
+
+private:
     static constexpr auto EngineName = "No Engine";
     static constexpr uint32_t EngineVersion = vk::makeApiVersion(0, 0, 0, 0);
 #ifdef NDEBUG

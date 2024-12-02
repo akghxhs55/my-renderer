@@ -1,4 +1,4 @@
-- [ ] Setup Vulkan
+- [x] Setup Vulkan
 - [ ] Implement Drawing
 - [ ] Implement Vertex Buffer and Index Buffer
 - [ ] Implement Texturing
