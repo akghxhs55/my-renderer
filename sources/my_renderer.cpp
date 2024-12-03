@@ -10,7 +10,9 @@ MyRenderer::MyRenderer() :
     pipelineLayout(createPipelineLayout(environment.device)),
     renderPass(createRenderPass(environment.device, environment.swapchainSurfaceFormat.format)),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPass)),
-    graphicsPipeline(createGraphicsPipeline(environment.device, pipelineLayout, renderPass, environment.swapchainExtent))
+    graphicsPipeline(createGraphicsPipeline(environment, pipelineLayout, renderPass)),
+    commandPool(createCommandPool(environment.device, environment.queueFamilyIndices.graphicsFamily.value())),
+    commandBuffer(createCommandBuffer(environment.device, commandPool))
 {
 }
 
@@ -27,6 +29,40 @@ void MyRenderer::run()
 
 void MyRenderer::drawFrame()
 {
+}
+
+void MyRenderer::recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const
+{
+    constexpr vk::CommandBufferBeginInfo beginInfo{
+        .pInheritanceInfo = nullptr
+    };
+
+    commandBuffer.begin(beginInfo);
+
+    constexpr vk::ClearValue clearColor{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } };
+    const vk::RenderPassBeginInfo renderPassBeginInfo{
+        .renderPass = *renderPass,
+        .framebuffer = *swapchainFramebuffers[imageIndex],
+        .renderArea = {
+            .offset = { 0, 0 },
+            .extent = environment.swapchainExtent
+        },
+        .clearValueCount = 1,
+        .pClearValues = &clearColor
+    };
+
+    commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+
+    commandBuffer.setViewport(0, environment.getViewport());
+    commandBuffer.setScissor(0, environment.getScissor());
+
+    commandBuffer.draw(3, 1, 0, 0);
+
+    commandBuffer.endRenderPass();
+
+    commandBuffer.end();
 }
 
 vk::raii::PipelineLayout MyRenderer::createPipelineLayout(const vk::raii::Device& device)
@@ -101,18 +137,17 @@ vk::raii::RenderPass MyRenderer::createRenderPass(const vk::raii::Device& device
     }
 }
 
-vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& device,
-                                                      const vk::raii::PipelineLayout& pipelineLayout, const vk::raii::RenderPass& renderPass,
-                                                      const vk::Extent2D& swapchainExtent)
+vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const Environment& environment,
+                                                      const vk::raii::PipelineLayout& pipelineLayout, const vk::raii::RenderPass& renderPass)
 {
-    const vk::raii::ShaderModule vertexShaderModule = createShaderModule(device, readFile("../shaders/vertex.spv"));
+    const vk::raii::ShaderModule vertexShaderModule = createShaderModule(environment.device, readFile("../shaders/vertex.spv"));
     const vk::PipelineShaderStageCreateInfo vertexShaderStageCreateInfo{
         .stage = vk::ShaderStageFlagBits::eVertex,
         .module = *vertexShaderModule,
         .pName = "main"
     };
 
-    const vk::raii::ShaderModule fragmentShaderModule = createShaderModule(device, readFile("../shaders/fragment.spv"));
+    const vk::raii::ShaderModule fragmentShaderModule = createShaderModule(environment.device, readFile("../shaders/fragment.spv"));
     const vk::PipelineShaderStageCreateInfo fragmentShaderStageCreateInfo{
         .stage = vk::ShaderStageFlagBits::eFragment,
         .module = *fragmentShaderModule,
@@ -133,20 +168,8 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& de
         .primitiveRestartEnable = vk::False
     };
 
-    const vk::Viewport viewport{
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = static_cast<float>(swapchainExtent.width),
-        .height = static_cast<float>(swapchainExtent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    const vk::Rect2D scissor{
-        .offset = { 0, 0 },
-        .extent = swapchainExtent
-    };
-
+    const vk::Viewport viewport = environment.getViewport();
+    const vk::Rect2D scissor = environment.getScissor();
     const vk::PipelineViewportStateCreateInfo viewportStateCreateInfo{
         .viewportCount = 1,
         .pViewports = &viewport,
@@ -222,11 +245,47 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const vk::raii::Device& de
 
     try
     {
-        return device.createGraphicsPipeline(nullptr, createInfo);
+        return environment.device.createGraphicsPipeline(nullptr, createInfo);
     }
     catch (const vk::SystemError& error)
     {
         throw std::runtime_error("Failed to create graphics pipeline.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+}
+
+vk::raii::CommandPool MyRenderer::createCommandPool(const vk::raii::Device& device, const uint32_t queueFamilyIndex)
+{
+    const vk::CommandPoolCreateInfo createInfo{
+        .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        .queueFamilyIndex = queueFamilyIndex
+    };
+
+    try
+    {
+        return device.createCommandPool(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create command pool.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+}
+
+vk::raii::CommandBuffer MyRenderer::createCommandBuffer(const vk::raii::Device& device,
+    const vk::raii::CommandPool& commandPool)
+{
+    const vk::CommandBufferAllocateInfo allocateInfo{
+        .commandPool = *commandPool,
+        .level = vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = 1
+    };
+
+    try
+    {
+        return std::move(device.allocateCommandBuffers(allocateInfo)[0]);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to allocate command buffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
     }
 }
 

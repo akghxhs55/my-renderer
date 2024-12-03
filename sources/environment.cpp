@@ -54,6 +54,26 @@ std::vector<vk::raii::Framebuffer> Environment::createSwapchainFramebuffers(cons
     return framebuffers;
 }
 
+vk::Viewport Environment::getViewport() const
+{
+    return {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(swapchainExtent.width),
+        .height = static_cast<float>(swapchainExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+}
+
+vk::Rect2D Environment::getScissor() const
+{
+    return {
+        .offset = { 0, 0 },
+        .extent = swapchainExtent
+    };
+}
+
 vk::raii::Instance Environment::createInstance(const char* applicationName, const uint32_t applicationVersion) const
 {
     void* pNext = nullptr;

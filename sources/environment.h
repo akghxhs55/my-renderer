@@ -12,7 +12,7 @@
 
 
 class Environment {
-private:
+public:
     struct QueueFamilyIndices {
         const std::optional<uint32_t> graphicsFamily;
         const std::optional<uint32_t> presentFamily;
@@ -60,9 +60,7 @@ private:
 public:
     const vk::raii::SurfaceKHR surface;
     const vk::raii::PhysicalDevice physicalDevice;
-private:
     const QueueFamilyIndices queueFamilyIndices;
-public:
     const vk::raii::Device device;
     const vk::raii::Queue graphicsQueue;
     const vk::raii::Queue presentQueue;
@@ -77,6 +75,8 @@ public:
     ~Environment();
 
     std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const;
+    vk::Viewport getViewport() const;
+    vk::Rect2D getScissor() const;
 
 private:
     static constexpr auto EngineName = "No Engine";
