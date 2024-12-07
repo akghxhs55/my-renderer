@@ -124,6 +124,29 @@ vk::Rect2D Environment::getScissor() const
     };
 }
 
+vk::Extent2D Environment::getSwapchainExtent() const
+{
+    return swapchainExtent;
+}
+
+const vk::raii::SwapchainKHR& Environment::getSwapchain() const
+{
+    return swapchain;
+}
+
+void Environment::recreateSwapchain()
+{
+    swapchainImageViews.clear();
+    swapchainImages.clear();
+    swapchain.clear();
+
+    swapchainExtent = chooseSwapchainExtent(querySwapchainSupport(physicalDevice).capabilities);
+
+    swapchain = createSwapchain();
+    swapchainImages = swapchain.getImages();
+    swapchainImageViews = createSwapchainImageViews();
+}
+
 vk::raii::Instance Environment::createInstance(const char* applicationName, const uint32_t applicationVersion) const
 {
     void* pNext = nullptr;

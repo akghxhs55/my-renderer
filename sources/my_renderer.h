@@ -45,6 +45,7 @@ private:
     void drawFrame();
 
     void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
+    void recreateSwapchain();
 
     static std::vector<SyncObjects> createSyncObjects(const uint32_t count, const Environment& environment);
 };

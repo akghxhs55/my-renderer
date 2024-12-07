@@ -66,11 +66,11 @@ private:
     const vk::raii::CommandPool graphicsCommandPool;
 public:
     const vk::SurfaceFormatKHR swapchainSurfaceFormat;
-    const vk::Extent2D swapchainExtent;
-    const vk::raii::SwapchainKHR swapchain;
 private:
-    const std::vector<vk::Image> swapchainImages;
-    const std::vector<vk::raii::ImageView> swapchainImageViews;
+    vk::Extent2D swapchainExtent;
+    vk::raii::SwapchainKHR swapchain;
+    std::vector<vk::Image> swapchainImages;
+    std::vector<vk::raii::ImageView> swapchainImageViews;
 
 public:
     Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion);
@@ -83,6 +83,10 @@ public:
 
     vk::Viewport getViewport() const;
     vk::Rect2D getScissor() const;
+    vk::Extent2D getSwapchainExtent() const;
+    const vk::raii::SwapchainKHR& getSwapchain() const;
+
+    void recreateSwapchain();
 
 private:
     static constexpr auto EngineName = "No Engine";

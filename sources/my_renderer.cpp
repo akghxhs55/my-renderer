@@ -34,8 +34,13 @@ void MyRenderer::drawFrame()
         throw std::runtime_error("Failed to wait for fence.");
     }
 
-    const auto& [acquireImageResult, imageIndex] = environment.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore, nullptr);
-    if (acquireImageResult != vk::Result::eSuccess && acquireImageResult != vk::Result::eSuboptimalKHR)
+    const auto& [acquireImageResult, imageIndex] = environment.getSwapchain().acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore, nullptr);
+    if (acquireImageResult == vk::Result::eErrorOutOfDateKHR)
+    {
+        recreateSwapchain();
+        return;
+    }
+    else if (acquireImageResult != vk::Result::eSuccess and acquireImageResult != vk::Result::eSuboptimalKHR)
     {
         throw std::runtime_error("Failed to acquire swapchain image.");
     }
@@ -43,7 +48,6 @@ void MyRenderer::drawFrame()
     environment.device.resetFences(*inFlightFence);
 
     graphicsCommandBuffer.reset(vk::CommandBufferResetFlagBits::eReleaseResources);
-
     recordRenderCommand(*graphicsCommandBuffer, imageIndex);
 
     constexpr std::array<vk::PipelineStageFlags, 1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
@@ -70,12 +74,20 @@ void MyRenderer::drawFrame()
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &*renderFinishedSemaphore,
         .swapchainCount = 1,
-        .pSwapchains = &*environment.swapchain,
+        .pSwapchains = &*environment.getSwapchain(),
         .pImageIndices = &imageIndex,
         .pResults = nullptr
     };
 
-    if (environment.presentQueue.presentKHR(presentInfo) != vk::Result::eSuccess)
+    if (const vk::Result result = environment.presentQueue.presentKHR(presentInfo);
+        result == vk::Result::eErrorOutOfDateKHR or
+        result == vk::Result::eSuboptimalKHR or
+        window.wasFramebufferResized())
+    {
+        window.resetFramebufferResized();
+        recreateSwapchain();
+    }
+    else if (result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to present swapchain image.");
     }
@@ -97,7 +109,7 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
         .framebuffer = *swapchainFramebuffers[imageIndex],
         .renderArea = {
             .offset = { 0, 0 },
-            .extent = environment.swapchainExtent
+            .extent = environment.getSwapchainExtent()
         },
         .clearValueCount = 1,
         .pClearValues = &clearColor
@@ -115,6 +127,21 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
     commandBuffer.endRenderPass();
 
     commandBuffer.end();
+}
+
+void MyRenderer::recreateSwapchain()
+{
+    if (window.getFramebufferSize().first == 0 or
+        window.getFramebufferSize().second == 0)
+    {
+        return;
+    }
+
+    environment.device.waitIdle();
+
+    swapchainFramebuffers.clear();
+    environment.recreateSwapchain();
+    swapchainFramebuffers = environment.createSwapchainFramebuffers(renderPipeline.renderPass);
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const uint32_t count, const Environment& environment)

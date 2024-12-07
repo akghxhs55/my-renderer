@@ -57,7 +57,6 @@ GLFWwindow* Window::createGlfwWindow(const char* windowTitle, const int width, c
     glfwInit();
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     GLFWwindow* window = glfwCreateWindow(width, height, windowTitle, nullptr, nullptr);
     if (window == nullptr)
