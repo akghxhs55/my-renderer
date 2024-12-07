@@ -64,6 +64,9 @@ public:
     const vk::raii::Device device;
     const vk::raii::Queue graphicsQueue;
     const vk::raii::Queue presentQueue;
+private:
+    const vk::raii::CommandPool graphicsCommandPool;
+public:
     const vk::SurfaceFormatKHR swapchainSurfaceFormat;
     const vk::Extent2D swapchainExtent;
     const vk::raii::SwapchainKHR swapchain;
@@ -74,7 +77,11 @@ public:
     Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion);
     ~Environment();
 
+    vk::raii::CommandBuffer createCommandBuffer() const;
+    vk::raii::Semaphore createSemaphore(const vk::SemaphoreCreateFlags flags = {}) const;
+    vk::raii::Fence createFence(const vk::FenceCreateFlags flags = {}) const;
     std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const;
+
     vk::Viewport getViewport() const;
     vk::Rect2D getScissor() const;
 
@@ -98,6 +105,7 @@ private:
     vk::raii::DebugUtilsMessengerEXT createDebugMessenger() const;
     vk::raii::PhysicalDevice selectPhysicalDevice() const;
     vk::raii::Device createDevice() const;
+    vk::raii::CommandPool createCommandPool(const uint32_t queueFamilyIndex) const;
     vk::raii::SwapchainKHR createSwapchain() const;
     std::vector<vk::raii::ImageView> createSwapchainImageViews() const;
 

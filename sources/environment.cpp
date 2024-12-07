@@ -16,6 +16,7 @@ Environment::Environment(const Window& window, const char* applicationName, cons
     device(createDevice()),
     graphicsQueue(device.getQueue(queueFamilyIndices.graphicsFamily.value(), 0)),
     presentQueue(device.getQueue(queueFamilyIndices.presentFamily.value(), 0)),
+    graphicsCommandPool(createCommandPool(queueFamilyIndices.graphicsFamily.value())),
     swapchainSurfaceFormat(chooseSwapchainSurfaceFormat(querySwapchainSupport(physicalDevice).formats)),
     swapchainExtent(chooseSwapchainExtent(querySwapchainSupport(physicalDevice).capabilities)),
     swapchain(createSwapchain()),
@@ -25,6 +26,55 @@ Environment::Environment(const Window& window, const char* applicationName, cons
 }
 
 Environment::~Environment() = default;
+
+vk::raii::CommandBuffer Environment::createCommandBuffer() const
+{
+    const vk::CommandBufferAllocateInfo allocateInfo{
+        .commandPool = *graphicsCommandPool,
+        .level = vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = 1
+    };
+
+    try
+    {
+        return std::move(device.allocateCommandBuffers(allocateInfo)[0]);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to allocate command buffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+}
+
+vk::raii::Semaphore Environment::createSemaphore(const vk::SemaphoreCreateFlags flags) const
+{
+    const vk::SemaphoreCreateInfo createInfo{
+        .flags = flags
+    };
+
+    try
+    {
+        return device.createSemaphore(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create Vulkan semaphore.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+}
+
+vk::raii::Fence Environment::createFence(const vk::FenceCreateFlags flags) const
+{
+    const vk::FenceCreateInfo createInfo{
+        .flags = flags
+    };
+
+    try {
+        return device.createFence(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create Vulkan fence.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+}
 
 std::vector<vk::raii::Framebuffer> Environment::createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const
 {
@@ -91,25 +141,25 @@ vk::raii::Instance Environment::createInstance(const char* applicationName, cons
         .apiVersion = vk::ApiVersion13
     };
 
-    std::vector<const char*> instanceLayers;
-    if (enabledDebug)
+    std::vector<const char*> enabledLayerNames;
+    if constexpr (enabledDebug)
     {
         for (const char* layer : validationLayers)
         {
-            instanceLayers.push_back(layer);
+            enabledLayerNames.push_back(layer);
         }
     }
 
-    std::vector<const char*> instanceExtensions = getRequiredExtensionNames();
+    std::vector<const char*> enabledExtensions = getRequiredExtensionNames();
 
     const vk::InstanceCreateInfo createInfo{
         .pNext = pNext,
         .flags = vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR,
         .pApplicationInfo = &applicationInfo,
-        .enabledLayerCount = static_cast<uint32_t>(instanceLayers.size()),
-        .ppEnabledLayerNames = instanceLayers.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size()),
-        .ppEnabledExtensionNames = instanceExtensions.data()
+        .enabledLayerCount = static_cast<uint32_t>(enabledLayerNames.size()),
+        .ppEnabledLayerNames = enabledLayerNames.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size()),
+        .ppEnabledExtensionNames = enabledExtensions.data()
     };
 
     try
@@ -139,55 +189,9 @@ vk::raii::DebugUtilsMessengerEXT Environment::createDebugMessenger() const
     }
 }
 
-std::vector<const char*> Environment::getRequiredExtensionNames()
-{
-    std::vector<const char*> extensionNames;
-
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
-    {
-        extensionNames.emplace_back(glfwExtensions[i]);
-    }
-
-    if constexpr (enabledDebug)
-    {
-        extensionNames.emplace_back(vk::EXTDebugUtilsExtensionName);
-    }
-
-    extensionNames.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
-
-    return extensionNames;
-}
-
-vk::DebugUtilsMessengerCreateInfoEXT Environment::getDebugUtilsMessengerCreateInfo()
-{
-    return vk::DebugUtilsMessengerCreateInfoEXT{
-        .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-        .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-        .pfnUserCallback = debugCallback,
-        .pUserData = nullptr
-    };
-}
-
-vk::Bool32 Environment::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData)
-{
-    std::cerr << "[Validation layer] " << pCallbackData->pMessage << std::endl;
-    return vk::False;
-}
-
-
 vk::raii::PhysicalDevice Environment::selectPhysicalDevice() const
 {
-    const std::vector<vk::raii::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
-
-    for (const vk::raii::PhysicalDevice& physicalDevice : physicalDevices)
+    for (const vk::raii::PhysicalDevice& physicalDevice : instance.enumeratePhysicalDevices())
     {
         if (isPhysicalDeviceSuitable(physicalDevice))
         {
@@ -212,16 +216,25 @@ vk::raii::Device Environment::createDevice() const
         });
     }
 
-    constexpr vk::PhysicalDeviceFeatures physicalDeviceFeatures;
+    std::vector<const char*> enabledLayerNames;
+    if constexpr (enabledDebug)
+    {
+        for (const char* layer : validationLayers)
+        {
+            enabledLayerNames.push_back(layer);
+        }
+    }
+
+    constexpr vk::PhysicalDeviceFeatures enabledFeatures{};
 
     const vk::DeviceCreateInfo createInfo{
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
         .pQueueCreateInfos = queueCreateInfos.data(),
         .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
         .ppEnabledExtensionNames = deviceExtensions.data(),
-        .enabledLayerCount = 0,
-        .ppEnabledLayerNames = nullptr,
-        .pEnabledFeatures = &physicalDeviceFeatures
+        .enabledLayerCount = static_cast<uint32_t>(enabledLayerNames.size()),
+        .ppEnabledLayerNames = enabledLayerNames.data(),
+        .pEnabledFeatures = &enabledFeatures
     };
 
     try
@@ -234,10 +247,26 @@ vk::raii::Device Environment::createDevice() const
     }
 }
 
+vk::raii::CommandPool Environment::createCommandPool(const uint32_t queueFamilyIndex) const
+{
+    const vk::CommandPoolCreateInfo createInfo{
+        .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        .queueFamilyIndex = queueFamilyIndex
+    };
+
+    try
+    {
+        return device.createCommandPool(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create command pool.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+}
+
 vk::raii::SwapchainKHR Environment::createSwapchain() const
 {
     const SwapchainDetails swapchainDetails = querySwapchainSupport(physicalDevice);
-
     const vk::PresentModeKHR presentMode = chooseSwapchainPresentMode(swapchainDetails.presentModes);
 
     uint32_t imageCount = swapchainDetails.capabilities.minImageCount + 1;
@@ -360,7 +389,7 @@ Environment::QueueFamilyIndices Environment::findQueueFamilies(const vk::raii::P
     {
         for (uint32_t presentFamilyIndex : presentFamilyIndices)
         {
-            if (graphicsFamilyIndex == presentFamilyIndex)
+            if (graphicsFamilyIndex != presentFamilyIndex)
             {
                 return QueueFamilyIndices{
                     .graphicsFamily = graphicsFamilyIndex,
@@ -425,4 +454,47 @@ vk::Extent2D Environment::chooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR
         .width = std::clamp(static_cast<uint32_t>(width), capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
         .height = std::clamp(static_cast<uint32_t>(height), capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
     };
+}
+
+std::vector<const char*> Environment::getRequiredExtensionNames()
+{
+    std::vector<const char*> extensionNames;
+
+    uint32_t glfwExtensionCount = 0;
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
+    {
+        extensionNames.emplace_back(glfwExtensions[i]);
+    }
+
+    if constexpr (enabledDebug)
+    {
+        extensionNames.emplace_back(vk::EXTDebugUtilsExtensionName);
+    }
+
+    extensionNames.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
+
+    return extensionNames;
+}
+
+vk::DebugUtilsMessengerCreateInfoEXT Environment::getDebugUtilsMessengerCreateInfo()
+{
+    return vk::DebugUtilsMessengerCreateInfoEXT{
+        .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+        .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+        .pfnUserCallback = debugCallback,
+        .pUserData = nullptr
+    };
+}
+
+vk::Bool32 Environment::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData)
+{
+    std::cerr << "[Validation layer] " << pCallbackData->pMessage << std::endl;
+    return vk::False;
 }

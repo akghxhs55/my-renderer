@@ -2,6 +2,7 @@
 
 
 #include <fstream>
+#include <iostream>
 
 
 MyRenderer::MyRenderer() :
@@ -11,24 +12,78 @@ MyRenderer::MyRenderer() :
     renderPass(createRenderPass(environment.device, environment.swapchainSurfaceFormat.format)),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPass)),
     graphicsPipeline(createGraphicsPipeline(environment, pipelineLayout, renderPass)),
-    commandPool(createCommandPool(environment.device, environment.queueFamilyIndices.graphicsFamily.value())),
-    commandBuffer(createCommandBuffer(environment.device, commandPool))
+    graphicsCommandBuffer(environment.createCommandBuffer()),
+    imageAvailableSemaphore(environment.createSemaphore()),
+    renderFinishedSemaphore(environment.createSemaphore()),
+    inFlightFence(environment.createFence(vk::FenceCreateFlagBits::eSignaled))
 {
 }
 
 MyRenderer::~MyRenderer() = default;
 
-void MyRenderer::run()
+void MyRenderer::run() const
 {
     while (!window.shouldClose())
     {
         glfwPollEvents();
         drawFrame();
     }
+
+    environment.device.waitIdle();
 }
 
-void MyRenderer::drawFrame()
+void MyRenderer::drawFrame() const
 {
+    if (environment.device.waitForFences(*inFlightFence, true, std::numeric_limits<uint64_t>::max()) != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Failed to wait for fence.");
+    }
+
+    const auto& [acquireImageResult, imageIndex] = environment.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableSemaphore, nullptr);
+    if (acquireImageResult != vk::Result::eSuccess && acquireImageResult != vk::Result::eSuboptimalKHR)
+    {
+        throw std::runtime_error("Failed to acquire swapchain image.");
+    }
+
+    environment.device.resetFences(*inFlightFence);
+
+    graphicsCommandBuffer.reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+
+    recordCommandBuffer(*graphicsCommandBuffer, imageIndex);
+
+    constexpr std::array<vk::PipelineStageFlags, 1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+
+    const vk::SubmitInfo submitInfo{
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &*imageAvailableSemaphore,
+        .pWaitDstStageMask = waitStages.data(),
+        .commandBufferCount = 1,
+        .pCommandBuffers = &*graphicsCommandBuffer,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &*renderFinishedSemaphore
+    };
+
+    try {
+        environment.graphicsQueue.submit(submitInfo, *inFlightFence);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to submit draw command buffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+
+    const vk::PresentInfoKHR presentInfo{
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &*renderFinishedSemaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &*environment.swapchain,
+        .pImageIndices = &imageIndex,
+        .pResults = nullptr
+    };
+
+    if (environment.presentQueue.presentKHR(presentInfo) != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Failed to present swapchain image.");
+    }
 }
 
 void MyRenderer::recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const
@@ -110,12 +165,12 @@ vk::raii::RenderPass MyRenderer::createRenderPass(const vk::raii::Device& device
     };
 
     constexpr vk::SubpassDependency subpassDependency{
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .srcSubpass = vk::SubpassExternal,
         .dstSubpass = 0,
         .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
         .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
         .srcAccessMask = {},
-        .dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite
+        .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite
     };
 
     const vk::RenderPassCreateInfo createInfo{
@@ -168,13 +223,11 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const Environment& environ
         .primitiveRestartEnable = vk::False
     };
 
-    const vk::Viewport viewport = environment.getViewport();
-    const vk::Rect2D scissor = environment.getScissor();
-    const vk::PipelineViewportStateCreateInfo viewportStateCreateInfo{
+    constexpr vk::PipelineViewportStateCreateInfo viewportStateCreateInfo{
         .viewportCount = 1,
-        .pViewports = &viewport,
+        .pViewports = nullptr,
         .scissorCount = 1,
-        .pScissors = &scissor
+        .pScissors = nullptr
     };
 
     constexpr vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo{
@@ -182,7 +235,7 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const Environment& environ
         .rasterizerDiscardEnable = vk::False,
         .polygonMode = vk::PolygonMode::eFill,
         .cullMode = vk::CullModeFlagBits::eBack,
-        .frontFace = vk::FrontFace::eCounterClockwise,
+        .frontFace = vk::FrontFace::eClockwise,
         .depthBiasEnable = vk::False,
         .depthBiasConstantFactor = 0.0f,
         .depthBiasClamp = 0.0f,
@@ -253,42 +306,6 @@ vk::raii::Pipeline MyRenderer::createGraphicsPipeline(const Environment& environ
     }
 }
 
-vk::raii::CommandPool MyRenderer::createCommandPool(const vk::raii::Device& device, const uint32_t queueFamilyIndex)
-{
-    const vk::CommandPoolCreateInfo createInfo{
-        .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-        .queueFamilyIndex = queueFamilyIndex
-    };
-
-    try
-    {
-        return device.createCommandPool(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create command pool.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
-}
-
-vk::raii::CommandBuffer MyRenderer::createCommandBuffer(const vk::raii::Device& device,
-    const vk::raii::CommandPool& commandPool)
-{
-    const vk::CommandBufferAllocateInfo allocateInfo{
-        .commandPool = *commandPool,
-        .level = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = 1
-    };
-
-    try
-    {
-        return std::move(device.allocateCommandBuffers(allocateInfo)[0]);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to allocate command buffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
-}
-
 vk::raii::ShaderModule MyRenderer::createShaderModule(const vk::raii::Device& device, const std::vector<char>& code)
 {
     const vk::ShaderModuleCreateInfo createInfo{
@@ -314,7 +331,7 @@ std::vector<char> MyRenderer::readFile(const std::string& filename)
         throw std::runtime_error("Failed to open file: " + filename);
     }
 
-    const size_t fileSize = static_cast<size_t>(file.tellg());
+    const std::streamsize fileSize = static_cast<std::streamsize>(file.tellg());
     std::vector<char> buffer(fileSize);
 
     file.seekg(0);

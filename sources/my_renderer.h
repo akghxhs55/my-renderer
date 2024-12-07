@@ -14,7 +14,7 @@ public:
     MyRenderer();
     ~MyRenderer();
 
-    void run();
+    void run() const;
 
 private:
     static constexpr auto WindowTitle = "My Renderer";
@@ -24,21 +24,18 @@ private:
     static constexpr auto ApplicationName = "My Renderer";
     static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 0, 0, 0);
 
-    const std::vector<const char*> deviceExtensions = {
-        "VK_KHR_portability_subset",
-        vk::KHRSwapchainExtensionName
-    };
-
     Window window;
     Environment environment;
     const vk::raii::PipelineLayout pipelineLayout;
     const vk::raii::RenderPass renderPass;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     const vk::raii::Pipeline graphicsPipeline;
-    const vk::raii::CommandPool commandPool;
-    const vk::raii::CommandBuffer commandBuffer;
+    const vk::raii::CommandBuffer graphicsCommandBuffer;
+    const vk::raii::Semaphore imageAvailableSemaphore;
+    const vk::raii::Semaphore renderFinishedSemaphore;
+    const vk::raii::Fence inFlightFence;
 
-    void drawFrame();
+    void drawFrame() const;
 
     void recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
 
@@ -46,9 +43,6 @@ private:
     static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);
     static vk::raii::Pipeline createGraphicsPipeline(const Environment& environment, const vk::raii::PipelineLayout& pipelineLayout,
         const vk::raii::RenderPass& renderPass);
-    static vk::raii::CommandPool createCommandPool(const vk::raii::Device& device, const uint32_t queueFamilyIndex);
-    static vk::raii::CommandBuffer createCommandBuffer(const vk::raii::Device& device, const vk::raii::CommandPool& commandPool);
-
     static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);
 
     static std::vector<char> readFile(const std::string& filename);
