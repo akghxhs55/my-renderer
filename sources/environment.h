@@ -53,14 +53,12 @@ public:
 private:
     const Window& window;
     const vk::raii::Context context;
-public:
     const vk::raii::Instance instance;
-private:
     const std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
-public:
     const vk::raii::SurfaceKHR surface;
     const vk::raii::PhysicalDevice physicalDevice;
     const QueueFamilyIndices queueFamilyIndices;
+public:
     const vk::raii::Device device;
     const vk::raii::Queue graphicsQueue;
     const vk::raii::Queue presentQueue;
@@ -70,6 +68,7 @@ public:
     const vk::SurfaceFormatKHR swapchainSurfaceFormat;
     const vk::Extent2D swapchainExtent;
     const vk::raii::SwapchainKHR swapchain;
+private:
     const std::vector<vk::Image> swapchainImages;
     const std::vector<vk::raii::ImageView> swapchainImageViews;
 
@@ -77,10 +76,10 @@ public:
     Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion);
     ~Environment();
 
-    vk::raii::CommandBuffer createCommandBuffer() const;
+    std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const;
+    std::vector<vk::raii::CommandBuffer> createGraphicsCommandBuffers(const uint32_t count, const vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary) const;
     vk::raii::Semaphore createSemaphore(const vk::SemaphoreCreateFlags flags = {}) const;
     vk::raii::Fence createFence(const vk::FenceCreateFlags flags = {}) const;
-    std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const;
 
     vk::Viewport getViewport() const;
     vk::Rect2D getScissor() const;

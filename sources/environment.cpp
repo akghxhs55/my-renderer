@@ -27,17 +27,45 @@ Environment::Environment(const Window& window, const char* applicationName, cons
 
 Environment::~Environment() = default;
 
-vk::raii::CommandBuffer Environment::createCommandBuffer() const
+std::vector<vk::raii::Framebuffer> Environment::createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const
+{
+    std::vector<vk::raii::Framebuffer> framebuffers;
+    framebuffers.reserve(swapchainImageViews.size());
+    for (const vk::raii::ImageView& imageView : swapchainImageViews)
+    {
+        const vk::FramebufferCreateInfo createInfo{
+            .renderPass = *renderPass,
+            .attachmentCount = 1,
+            .pAttachments = &*imageView,
+            .width = swapchainExtent.width,
+            .height = swapchainExtent.height,
+            .layers = 1
+        };
+
+        try
+        {
+            framebuffers.emplace_back(device, createInfo);
+        }
+        catch (const vk::SystemError& error)
+        {
+            throw std::runtime_error("Failed to create Vulkan framebuffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+        }
+    }
+
+    return framebuffers;
+}
+
+std::vector<vk::raii::CommandBuffer> Environment::createGraphicsCommandBuffers(const uint32_t count, const vk::CommandBufferLevel level) const
 {
     const vk::CommandBufferAllocateInfo allocateInfo{
         .commandPool = *graphicsCommandPool,
-        .level = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = 1
+        .level = level,
+        .commandBufferCount = count
     };
 
     try
     {
-        return std::move(device.allocateCommandBuffers(allocateInfo)[0]);
+        return device.allocateCommandBuffers(allocateInfo);
     }
     catch (const vk::SystemError& error)
     {
@@ -74,34 +102,6 @@ vk::raii::Fence Environment::createFence(const vk::FenceCreateFlags flags) const
     {
         throw std::runtime_error("Failed to create Vulkan fence.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
     }
-}
-
-std::vector<vk::raii::Framebuffer> Environment::createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const
-{
-    std::vector<vk::raii::Framebuffer> framebuffers;
-    framebuffers.reserve(swapchainImageViews.size());
-    for (const vk::raii::ImageView& imageView : swapchainImageViews)
-    {
-        const vk::FramebufferCreateInfo createInfo{
-            .renderPass = *renderPass,
-            .attachmentCount = 1,
-            .pAttachments = &*imageView,
-            .width = swapchainExtent.width,
-            .height = swapchainExtent.height,
-            .layers = 1
-        };
-
-        try
-        {
-            framebuffers.emplace_back(device, createInfo);
-        }
-        catch (const vk::SystemError& error)
-        {
-            throw std::runtime_error("Failed to create Vulkan framebuffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-        }
-    }
-
-    return framebuffers;
 }
 
 vk::Viewport Environment::getViewport() const

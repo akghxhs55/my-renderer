@@ -8,6 +8,7 @@ add_executable(my_renderer sources/main.cpp
         sources/window.cpp sources/window.h
         sources/environment.cpp sources/environment.h
         sources/vertex.cpp sources/vertex.h
+        sources/render_pipeline.cpp sources/render_pipeline.h
 )
 
 find_package(VulkanLoader REQUIRED)

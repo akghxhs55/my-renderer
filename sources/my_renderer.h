@@ -7,14 +7,22 @@
 
 #include "window.h"
 #include "environment.h"
+#include "render_pipeline.h"
 
 
 class MyRenderer {
+private:
+    struct SyncObjects {
+        vk::raii::Semaphore imageAvailableSemaphore;
+        vk::raii::Semaphore renderFinishedSemaphore;
+        vk::raii::Fence inFlightFence;
+    };
+
 public:
     MyRenderer();
     ~MyRenderer();
 
-    void run() const;
+    void run();
 
 private:
     static constexpr auto WindowTitle = "My Renderer";
@@ -24,28 +32,21 @@ private:
     static constexpr auto ApplicationName = "My Renderer";
     static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 0, 0, 0);
 
+    static constexpr uint32_t MaxFramesInFlight = 2;
+
     Window window;
     Environment environment;
-    const vk::raii::PipelineLayout pipelineLayout;
-    const vk::raii::RenderPass renderPass;
+    RenderPipeline renderPipeline;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
-    const vk::raii::Pipeline graphicsPipeline;
-    const vk::raii::CommandBuffer graphicsCommandBuffer;
-    const vk::raii::Semaphore imageAvailableSemaphore;
-    const vk::raii::Semaphore renderFinishedSemaphore;
-    const vk::raii::Fence inFlightFence;
+    const std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
+    const std::vector<SyncObjects> syncObjects;
+    uint32_t currentFrame = 0;
 
-    void drawFrame() const;
+    void drawFrame();
 
-    void recordCommandBuffer(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
+    void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
 
-    static vk::raii::PipelineLayout createPipelineLayout(const vk::raii::Device& device);
-    static vk::raii::RenderPass createRenderPass(const vk::raii::Device& device, const vk::Format& swapchainImageFormat);
-    static vk::raii::Pipeline createGraphicsPipeline(const Environment& environment, const vk::raii::PipelineLayout& pipelineLayout,
-        const vk::raii::RenderPass& renderPass);
-    static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);
-
-    static std::vector<char> readFile(const std::string& filename);
+    static std::vector<SyncObjects> createSyncObjects(const uint32_t count, const Environment& environment);
 };
 
 
