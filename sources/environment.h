@@ -89,6 +89,8 @@ public:
     const vk::raii::SwapchainKHR& getSwapchain() const;
 
     void recreateSwapchain();
+    vk::raii::CommandBuffer beginSingleTimeCommands() const;
+    void submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
 
 private:
     static constexpr auto EngineName = "No Engine";

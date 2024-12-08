@@ -42,14 +42,7 @@ std::vector<vk::raii::Framebuffer> Environment::createSwapchainFramebuffers(cons
             .layers = 1
         };
 
-        try
-        {
-            framebuffers.emplace_back(device, createInfo);
-        }
-        catch (const vk::SystemError& error)
-        {
-            throw std::runtime_error("Failed to create Vulkan framebuffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-        }
+        framebuffers.emplace_back(device, createInfo);
     }
 
     return framebuffers;
@@ -63,14 +56,7 @@ std::vector<vk::raii::CommandBuffer> Environment::createGraphicsCommandBuffers(c
         .commandBufferCount = count
     };
 
-    try
-    {
-        return device.allocateCommandBuffers(allocateInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to allocate command buffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return device.allocateCommandBuffers(allocateInfo);
 }
 
 vk::raii::Semaphore Environment::createSemaphore(const vk::SemaphoreCreateFlags flags) const
@@ -79,14 +65,7 @@ vk::raii::Semaphore Environment::createSemaphore(const vk::SemaphoreCreateFlags 
         .flags = flags
     };
 
-    try
-    {
-        return device.createSemaphore(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create Vulkan semaphore.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return device.createSemaphore(createInfo);
 }
 
 vk::raii::Fence Environment::createFence(const vk::FenceCreateFlags flags) const
@@ -95,13 +74,7 @@ vk::raii::Fence Environment::createFence(const vk::FenceCreateFlags flags) const
         .flags = flags
     };
 
-    try {
-        return device.createFence(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create Vulkan fence.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return device.createFence(createInfo);
 }
 
 vk::raii::Buffer Environment::createBuffer(const vk::DeviceSize size, const vk::BufferUsageFlags usage) const
@@ -114,14 +87,8 @@ vk::raii::Buffer Environment::createBuffer(const vk::DeviceSize size, const vk::
         .pQueueFamilyIndices = nullptr
     };
 
-    try
-    {
-        return device.createBuffer(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create buffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+
+    return device.createBuffer(createInfo);
 }
 
 vk::raii::DeviceMemory Environment::allocateBufferMemory(const vk::raii::Buffer& buffer,
@@ -134,14 +101,7 @@ vk::raii::DeviceMemory Environment::allocateBufferMemory(const vk::raii::Buffer&
         .memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties)
     };
 
-    try
-    {
-        return device.allocateMemory(allocateInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to allocate buffer memory.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return device.allocateMemory(allocateInfo);
 }
 
 vk::Viewport Environment::getViewport() const
@@ -187,6 +147,43 @@ void Environment::recreateSwapchain()
     swapchainImageViews = createSwapchainImageViews();
 }
 
+vk::raii::CommandBuffer Environment::beginSingleTimeCommands() const
+{
+    const vk::CommandBufferAllocateInfo allocateInfo{
+        .commandPool = *graphicsCommandPool,
+        .level = vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = 1
+    };
+
+    vk::raii::CommandBuffer commandBuffer = std::move(device.allocateCommandBuffers(allocateInfo)[0]);
+
+    constexpr vk::CommandBufferBeginInfo beginInfo{
+        .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+    };
+
+    commandBuffer.begin(beginInfo);
+
+    return commandBuffer;
+}
+
+void Environment::submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const
+{
+    commandBuffer.end();
+
+    const vk::SubmitInfo submitInfo{
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .pWaitDstStageMask = nullptr,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &*commandBuffer,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr
+    };
+
+    graphicsQueue.submit(submitInfo, nullptr);
+    graphicsQueue.waitIdle();
+}
+
 vk::raii::Instance Environment::createInstance(const char* applicationName, const uint32_t applicationVersion) const
 {
     void* pNext = nullptr;
@@ -225,14 +222,7 @@ vk::raii::Instance Environment::createInstance(const char* applicationName, cons
         .ppEnabledExtensionNames = enabledExtensions.data()
     };
 
-    try
-    {
-        return context.createInstance(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create Vulkan instance.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return context.createInstance(createInfo);
 }
 
 vk::raii::DebugUtilsMessengerEXT Environment::createDebugMessenger() const
@@ -242,14 +232,7 @@ vk::raii::DebugUtilsMessengerEXT Environment::createDebugMessenger() const
         return nullptr;
     }
 
-    try
-    {
-        return instance.createDebugUtilsMessengerEXT(getDebugUtilsMessengerCreateInfo());
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create Vulkan debug utils messenger.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return instance.createDebugUtilsMessengerEXT(getDebugUtilsMessengerCreateInfo());
 }
 
 vk::raii::PhysicalDevice Environment::selectPhysicalDevice() const
@@ -300,14 +283,7 @@ vk::raii::Device Environment::createDevice() const
         .pEnabledFeatures = &enabledFeatures
     };
 
-    try
-    {
-        return physicalDevice.createDevice(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create Vulkan logical device.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return physicalDevice.createDevice(createInfo);
 }
 
 vk::raii::CommandPool Environment::createCommandPool(const uint32_t queueFamilyIndex) const
@@ -317,14 +293,7 @@ vk::raii::CommandPool Environment::createCommandPool(const uint32_t queueFamilyI
         .queueFamilyIndex = queueFamilyIndex
     };
 
-    try
-    {
-        return device.createCommandPool(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create command pool.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return device.createCommandPool(createInfo);
 }
 
 vk::raii::SwapchainKHR Environment::createSwapchain() const
@@ -358,14 +327,7 @@ vk::raii::SwapchainKHR Environment::createSwapchain() const
         .oldSwapchain = nullptr
     };
 
-    try
-    {
-        return device.createSwapchainKHR(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create Vulkan swapchain.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return device.createSwapchainKHR(createInfo);
 }
 
 std::vector<vk::raii::ImageView> Environment::createSwapchainImageViews() const
@@ -392,14 +354,7 @@ std::vector<vk::raii::ImageView> Environment::createSwapchainImageViews() const
             }
         };
 
-        try
-        {
-            swapchainImageViews.emplace_back(device.createImageView(createInfo));
-        }
-        catch (const vk::SystemError& error)
-        {
-            throw std::runtime_error("Failed to create Vulkan image view.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-        }
+        swapchainImageViews.emplace_back(device.createImageView(createInfo));
     }
 
     return swapchainImageViews;

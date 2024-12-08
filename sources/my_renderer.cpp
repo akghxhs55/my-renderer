@@ -8,14 +8,12 @@ MyRenderer::MyRenderer() :
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
-    vertexBuffer(environment.createBuffer(Vertex::Size * sizeof(vertices), vk::BufferUsageFlagBits::eVertexBuffer)),
+    vertexBuffer(environment.createBuffer(Vertex::Size * sizeof(vertices), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer)),
     vertexBufferMemory(environment.allocateBufferMemory(vertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
 {
     vertexBuffer.bindMemory(*vertexBufferMemory, 0);
 
-    void* data = vertexBufferMemory.mapMemory(0, Vertex::Size * sizeof(vertices));
-    std::memcpy(data, vertices.data(), Vertex::Size * sizeof(vertices));
-    vertexBufferMemory.unmapMemory();
+    copyData(vertexBuffer, vertices.data(), Vertex::Size * sizeof(vertices));
 }
 
 MyRenderer::~MyRenderer() = default;
@@ -69,13 +67,7 @@ void MyRenderer::drawFrame()
         .pSignalSemaphores = &*renderFinishedSemaphore
     };
 
-    try {
-        environment.graphicsQueue.submit(submitInfo, *inFlightFence);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to submit draw command buffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    environment.graphicsQueue.submit(submitInfo, *inFlightFence);
 
     const vk::PresentInfoKHR presentInfo{
         .waitSemaphoreCount = 1,
@@ -151,6 +143,28 @@ void MyRenderer::recreateSwapchain()
     swapchainFramebuffers.clear();
     environment.recreateSwapchain();
     swapchainFramebuffers = environment.createSwapchainFramebuffers(renderPipeline.renderPass);
+}
+
+void MyRenderer::copyData(const vk::raii::Buffer& dstBuffer, const void* srcData, const vk::DeviceSize size) const
+{
+    const vk::raii::Buffer stagingBuffer = environment.createBuffer(size, vk::BufferUsageFlagBits::eTransferSrc);
+    const vk::raii::DeviceMemory stagingBufferMemory = environment.allocateBufferMemory(stagingBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+    stagingBuffer.bindMemory(*stagingBufferMemory, 0);
+
+    void* dstData = stagingBufferMemory.mapMemory(0, size);
+    std::memcpy(dstData, srcData, size);
+    stagingBufferMemory.unmapMemory();
+
+    const vk::raii::CommandBuffer commandBuffer = environment.beginSingleTimeCommands();
+
+    const vk::BufferCopy copyRegion{
+        .srcOffset = 0,
+        .dstOffset = 0,
+        .size = size
+    };
+    commandBuffer.copyBuffer(*stagingBuffer, *dstBuffer, copyRegion);
+
+    environment.submitSingleTimeCommands(commandBuffer);
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)

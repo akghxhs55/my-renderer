@@ -25,14 +25,7 @@ vk::raii::PipelineLayout RenderPipeline::createPipelineLayout() const
         .pPushConstantRanges = nullptr
     };
 
-    try
-    {
-        return environment.device.createPipelineLayout(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create pipeline layout.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return environment.device.createPipelineLayout(createInfo);
 }
 
 vk::raii::RenderPass RenderPipeline::createRenderPass() const
@@ -77,14 +70,7 @@ vk::raii::RenderPass RenderPipeline::createRenderPass() const
         .pDependencies = &subpassDependency
     };
 
-    try
-    {
-        return environment.device.createRenderPass(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create render pass.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return environment.device.createRenderPass(createInfo);
 }
 
 vk::raii::Pipeline RenderPipeline::createGraphicsPipeline() const
@@ -192,14 +178,7 @@ vk::raii::Pipeline RenderPipeline::createGraphicsPipeline() const
         .basePipelineIndex = -1
     };
 
-    try
-    {
-        return environment.device.createGraphicsPipeline(nullptr, createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create graphics pipeline.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return environment.device.createGraphicsPipeline(nullptr, createInfo);
 }
 
 vk::raii::ShaderModule RenderPipeline::createShaderModule(const vk::raii::Device& device, const std::vector<char>& code)
@@ -209,14 +188,7 @@ vk::raii::ShaderModule RenderPipeline::createShaderModule(const vk::raii::Device
         .pCode = reinterpret_cast<const uint32_t*>(code.data())
     };
 
-    try
-    {
-        return device.createShaderModule(createInfo);
-    }
-    catch (const vk::SystemError& error)
-    {
-        throw std::runtime_error("Failed to create shader module.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
-    }
+    return device.createShaderModule(createInfo);
 }
 
 std::vector<char> RenderPipeline::readFile(const std::string& filename)
