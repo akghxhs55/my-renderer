@@ -147,43 +147,6 @@ void Environment::recreateSwapchain()
     swapchainImageViews = createSwapchainImageViews();
 }
 
-vk::raii::CommandBuffer Environment::beginSingleTimeCommands() const
-{
-    const vk::CommandBufferAllocateInfo allocateInfo{
-        .commandPool = *graphicsCommandPool,
-        .level = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = 1
-    };
-
-    vk::raii::CommandBuffer commandBuffer = std::move(device.allocateCommandBuffers(allocateInfo)[0]);
-
-    constexpr vk::CommandBufferBeginInfo beginInfo{
-        .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
-    };
-
-    commandBuffer.begin(beginInfo);
-
-    return commandBuffer;
-}
-
-void Environment::submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const
-{
-    commandBuffer.end();
-
-    const vk::SubmitInfo submitInfo{
-        .waitSemaphoreCount = 0,
-        .pWaitSemaphores = nullptr,
-        .pWaitDstStageMask = nullptr,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &*commandBuffer,
-        .signalSemaphoreCount = 0,
-        .pSignalSemaphores = nullptr
-    };
-
-    graphicsQueue.submit(submitInfo, nullptr);
-    graphicsQueue.waitIdle();
-}
-
 vk::raii::Instance Environment::createInstance(const char* applicationName, const uint32_t applicationVersion) const
 {
     void* pNext = nullptr;

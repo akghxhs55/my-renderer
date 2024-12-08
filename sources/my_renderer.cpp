@@ -12,7 +12,6 @@ MyRenderer::MyRenderer() :
     vertexBufferMemory(environment.allocateBufferMemory(vertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
 {
     vertexBuffer.bindMemory(*vertexBufferMemory, 0);
-
     copyData(vertexBuffer, vertices.data(), Vertex::Size * sizeof(vertices));
 }
 
@@ -155,7 +154,7 @@ void MyRenderer::copyData(const vk::raii::Buffer& dstBuffer, const void* srcData
     std::memcpy(dstData, srcData, size);
     stagingBufferMemory.unmapMemory();
 
-    const vk::raii::CommandBuffer commandBuffer = environment.beginSingleTimeCommands();
+    const vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
 
     const vk::BufferCopy copyRegion{
         .srcOffset = 0,
@@ -164,7 +163,38 @@ void MyRenderer::copyData(const vk::raii::Buffer& dstBuffer, const void* srcData
     };
     commandBuffer.copyBuffer(*stagingBuffer, *dstBuffer, copyRegion);
 
-    environment.submitSingleTimeCommands(commandBuffer);
+    submitSingleTimeCommands(commandBuffer);
+}
+
+vk::raii::CommandBuffer MyRenderer::beginSingleTimeCommands() const
+{
+    vk::raii::CommandBuffer commandBuffer = std::move(environment.createGraphicsCommandBuffers(1)[0]);
+
+    constexpr vk::CommandBufferBeginInfo beginInfo{
+        .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+    };
+
+    commandBuffer.begin(beginInfo);
+
+    return commandBuffer;
+}
+
+void MyRenderer::submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const
+{
+    commandBuffer.end();
+
+    const vk::SubmitInfo submitInfo{
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .pWaitDstStageMask = nullptr,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &*commandBuffer,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr
+    };
+
+    environment.graphicsQueue.submit(submitInfo, nullptr);
+    environment.graphicsQueue.waitIdle();
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)

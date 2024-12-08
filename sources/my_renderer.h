@@ -56,6 +56,8 @@ private:
     void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
     void recreateSwapchain();
     void copyData(const vk::raii::Buffer& dstBuffer, const void* srcData, const vk::DeviceSize size) const;
+    vk::raii::CommandBuffer beginSingleTimeCommands() const;
+    void submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
 
     static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };
