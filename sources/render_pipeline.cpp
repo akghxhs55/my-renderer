@@ -1,6 +1,8 @@
 #include "render_pipeline.h"
 
 
+#include "vertex.h"
+
 #include <fstream>
 
 
@@ -103,11 +105,13 @@ vk::raii::Pipeline RenderPipeline::createGraphicsPipeline() const
 
     const std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStageCreateInfos = { vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo };
 
-    constexpr vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo {
-        .vertexBindingDescriptionCount = 0,
-        .pVertexBindingDescriptions = nullptr,
-        .vertexAttributeDescriptionCount = 0,
-        .pVertexAttributeDescriptions = nullptr
+    const vk::VertexInputBindingDescription vertexInputBindingDescription = Vertex::getBindingDescription();
+    const std::array<vk::VertexInputAttributeDescription, 2> vertexInputAttributeDescriptions = Vertex::getAttributeDescriptions();
+    const vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo {
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &vertexInputBindingDescription,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexInputAttributeDescriptions.size()),
+        .pVertexAttributeDescriptions = vertexInputAttributeDescriptions.data()
     };
 
     constexpr vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo{

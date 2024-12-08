@@ -104,6 +104,46 @@ vk::raii::Fence Environment::createFence(const vk::FenceCreateFlags flags) const
     }
 }
 
+vk::raii::Buffer Environment::createBuffer(const vk::DeviceSize size, const vk::BufferUsageFlags usage) const
+{
+    const vk::BufferCreateInfo createInfo{
+        .size = size,
+        .usage = usage,
+        .sharingMode = vk::SharingMode::eExclusive,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr
+    };
+
+    try
+    {
+        return device.createBuffer(createInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to create buffer.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+}
+
+vk::raii::DeviceMemory Environment::allocateBufferMemory(const vk::raii::Buffer& buffer,
+    const vk::MemoryPropertyFlags properties) const
+{
+    const vk::MemoryRequirements memoryRequirements = buffer.getMemoryRequirements();
+
+    const vk::MemoryAllocateInfo allocateInfo{
+        .allocationSize = memoryRequirements.size,
+        .memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties)
+    };
+
+    try
+    {
+        return device.allocateMemory(allocateInfo);
+    }
+    catch (const vk::SystemError& error)
+    {
+        throw std::runtime_error("Failed to allocate buffer memory.\n Error code: " + std::to_string(error.code().value()) + "\n Error description: " + error.what());
+    }
+}
+
 vk::Viewport Environment::getViewport() const
 {
     return {
@@ -365,6 +405,41 @@ std::vector<vk::raii::ImageView> Environment::createSwapchainImageViews() const
     return swapchainImageViews;
 }
 
+std::vector<const char*> Environment::getRequiredExtensionNames()
+{
+    std::vector<const char*> extensionNames;
+
+    uint32_t glfwExtensionCount = 0;
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
+    {
+        extensionNames.emplace_back(glfwExtensions[i]);
+    }
+
+    if constexpr (enabledDebug)
+    {
+        extensionNames.emplace_back(vk::EXTDebugUtilsExtensionName);
+    }
+
+    extensionNames.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
+
+    return extensionNames;
+}
+
+vk::DebugUtilsMessengerCreateInfoEXT Environment::getDebugUtilsMessengerCreateInfo()
+{
+    return vk::DebugUtilsMessengerCreateInfoEXT{
+        .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+        .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+        .pfnUserCallback = debugCallback,
+        .pUserData = nullptr
+    };
+}
+
 bool Environment::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const
 {
     const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
@@ -479,45 +554,26 @@ vk::Extent2D Environment::chooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR
     };
 }
 
-std::vector<const char*> Environment::getRequiredExtensionNames()
-{
-    std::vector<const char*> extensionNames;
-
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
-    {
-        extensionNames.emplace_back(glfwExtensions[i]);
-    }
-
-    if constexpr (enabledDebug)
-    {
-        extensionNames.emplace_back(vk::EXTDebugUtilsExtensionName);
-    }
-
-    extensionNames.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
-
-    return extensionNames;
-}
-
-vk::DebugUtilsMessengerCreateInfoEXT Environment::getDebugUtilsMessengerCreateInfo()
-{
-    return vk::DebugUtilsMessengerCreateInfoEXT{
-        .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-        .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-        .pfnUserCallback = debugCallback,
-        .pUserData = nullptr
-    };
-}
-
 vk::Bool32 Environment::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData)
 {
     std::cerr << "[Validation layer] " << pCallbackData->pMessage << std::endl;
     return vk::False;
+}
+
+uint32_t Environment::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const
+{
+    const vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDevice.getMemoryProperties();
+
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+    {
+        if ((typeFilter & (1 << i)) and
+            (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("Failed to find suitable memory type.");
 }

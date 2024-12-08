@@ -7,8 +7,15 @@ MyRenderer::MyRenderer() :
     renderPipeline(environment),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
-    syncObjects(createSyncObjects(MaxFramesInFlight, environment))
+    syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
+    vertexBuffer(environment.createBuffer(Vertex::Size * sizeof(vertices), vk::BufferUsageFlagBits::eVertexBuffer)),
+    vertexBufferMemory(environment.allocateBufferMemory(vertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
 {
+    vertexBuffer.bindMemory(*vertexBufferMemory, 0);
+
+    void* data = vertexBufferMemory.mapMemory(0, Vertex::Size * sizeof(vertices));
+    std::memcpy(data, vertices.data(), Vertex::Size * sizeof(vertices));
+    vertexBufferMemory.unmapMemory();
 }
 
 MyRenderer::~MyRenderer() = default;
@@ -122,7 +129,9 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
     commandBuffer.setViewport(0, environment.getViewport());
     commandBuffer.setScissor(0, environment.getScissor());
 
-    commandBuffer.draw(3, 1, 0, 0);
+    commandBuffer.bindVertexBuffers(0, *vertexBuffer, { 0 });
+
+    commandBuffer.draw(vertices.size(), 1, 0, 0);
 
     commandBuffer.endRenderPass();
 
@@ -144,7 +153,7 @@ void MyRenderer::recreateSwapchain()
     swapchainFramebuffers = environment.createSwapchainFramebuffers(renderPipeline.renderPass);
 }
 
-std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const uint32_t count, const Environment& environment)
+std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)
 {
     std::vector<SyncObjects> syncObjects;
     syncObjects.reserve(count);

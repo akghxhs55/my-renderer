@@ -8,6 +8,7 @@
 #include "window.h"
 #include "environment.h"
 #include "render_pipeline.h"
+#include "vertex.h"
 
 
 class MyRenderer {
@@ -34,6 +35,12 @@ private:
 
     static constexpr uint32_t MaxFramesInFlight = 2;
 
+    static constexpr std::array<Vertex, 3> vertices = {
+        Vertex{ { 0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+        Vertex{ { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
+        Vertex{ { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } }
+    };
+
     Window window;
     Environment environment;
     RenderPipeline renderPipeline;
@@ -41,13 +48,15 @@ private:
     const std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
     const std::vector<SyncObjects> syncObjects;
     uint32_t currentFrame = 0;
+    const vk::raii::Buffer vertexBuffer;
+    const vk::raii::DeviceMemory vertexBufferMemory;
 
     void drawFrame();
 
     void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
     void recreateSwapchain();
 
-    static std::vector<SyncObjects> createSyncObjects(const uint32_t count, const Environment& environment);
+    static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };
 
 
