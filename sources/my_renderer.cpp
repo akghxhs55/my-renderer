@@ -8,9 +8,11 @@ MyRenderer::MyRenderer() :
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
-    vertexBuffer(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)
+    vertexBuffer(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
+    indexBuffer(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer)
 {
     vertexBuffer.copyData(vertices.data(), Vertex::Size * vertices.size());
+    indexBuffer.copyData(indices.data(), sizeof(indices));
 }
 
 MyRenderer::~MyRenderer() = default;
@@ -119,8 +121,9 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
     commandBuffer.setScissor(0, environment.getScissor());
 
     commandBuffer.bindVertexBuffers(0, *vertexBuffer.buffer, { 0 });
+    commandBuffer.bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
 
-    commandBuffer.draw(vertices.size(), 1, 0, 0);
+    commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
 
     commandBuffer.endRenderPass();
 

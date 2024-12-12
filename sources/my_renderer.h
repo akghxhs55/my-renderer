@@ -36,10 +36,14 @@ private:
 
     static constexpr uint32_t MaxFramesInFlight = 2;
 
-    static constexpr std::array<Vertex, 3> vertices = {
-        Vertex{ { 0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
-        Vertex{ { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
-        Vertex{ { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } }
+    static constexpr std::array<Vertex, 4> vertices = {
+        Vertex{ { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+        Vertex{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
+        Vertex{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
+        Vertex{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } }
+    };
+    static constexpr std::array<uint16_t, 6> indices = {
+        0, 1, 2, 2, 3, 0
     };
 
     Window window;
@@ -50,6 +54,7 @@ private:
     const std::vector<SyncObjects> syncObjects;
     uint32_t currentFrame = 0;
     DeviceLocalBuffer vertexBuffer;
+    DeviceLocalBuffer indexBuffer;
 
     void drawFrame();
 
