@@ -56,7 +56,9 @@ private:
     const vk::raii::Instance instance;
     const std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
     const vk::raii::SurfaceKHR surface;
+public:
     const vk::raii::PhysicalDevice physicalDevice;
+private:
     const QueueFamilyIndices queueFamilyIndices;
 public:
     const vk::raii::Device device;
@@ -80,8 +82,6 @@ public:
     std::vector<vk::raii::CommandBuffer> createGraphicsCommandBuffers(const uint32_t count, const vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary) const;
     vk::raii::Semaphore createSemaphore(const vk::SemaphoreCreateFlags flags = {}) const;
     vk::raii::Fence createFence(const vk::FenceCreateFlags flags = {}) const;
-    vk::raii::Buffer createBuffer(const vk::DeviceSize size, const vk::BufferUsageFlags usage) const;
-    vk::raii::DeviceMemory allocateBufferMemory(const vk::raii::Buffer& buffer, const vk::MemoryPropertyFlags properties) const;
 
     vk::Viewport getViewport() const;
     vk::Rect2D getScissor() const;

@@ -9,6 +9,7 @@
 #include "environment.h"
 #include "render_pipeline.h"
 #include "vertex.h"
+#include "device_local_buffer.h"
 
 
 class MyRenderer {
@@ -48,14 +49,12 @@ private:
     const std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
     const std::vector<SyncObjects> syncObjects;
     uint32_t currentFrame = 0;
-    const vk::raii::Buffer vertexBuffer;
-    const vk::raii::DeviceMemory vertexBufferMemory;
+    DeviceLocalBuffer vertexBuffer;
 
     void drawFrame();
 
     void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
     void recreateSwapchain();
-    void copyData(const vk::raii::Buffer& dstBuffer, const void* srcData, const vk::DeviceSize size) const;
     vk::raii::CommandBuffer beginSingleTimeCommands() const;
     void submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
 

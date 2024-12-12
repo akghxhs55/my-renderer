@@ -77,33 +77,6 @@ vk::raii::Fence Environment::createFence(const vk::FenceCreateFlags flags) const
     return device.createFence(createInfo);
 }
 
-vk::raii::Buffer Environment::createBuffer(const vk::DeviceSize size, const vk::BufferUsageFlags usage) const
-{
-    const vk::BufferCreateInfo createInfo{
-        .size = size,
-        .usage = usage,
-        .sharingMode = vk::SharingMode::eExclusive,
-        .queueFamilyIndexCount = 0,
-        .pQueueFamilyIndices = nullptr
-    };
-
-
-    return device.createBuffer(createInfo);
-}
-
-vk::raii::DeviceMemory Environment::allocateBufferMemory(const vk::raii::Buffer& buffer,
-    const vk::MemoryPropertyFlags properties) const
-{
-    const vk::MemoryRequirements memoryRequirements = buffer.getMemoryRequirements();
-
-    const vk::MemoryAllocateInfo allocateInfo{
-        .allocationSize = memoryRequirements.size,
-        .memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties)
-    };
-
-    return device.allocateMemory(allocateInfo);
-}
-
 vk::Viewport Environment::getViewport() const
 {
     return {

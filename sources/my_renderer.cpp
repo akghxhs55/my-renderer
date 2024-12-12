@@ -8,11 +8,9 @@ MyRenderer::MyRenderer() :
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
-    vertexBuffer(environment.createBuffer(Vertex::Size * sizeof(vertices), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer)),
-    vertexBufferMemory(environment.allocateBufferMemory(vertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
+    vertexBuffer(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)
 {
-    vertexBuffer.bindMemory(*vertexBufferMemory, 0);
-    copyData(vertexBuffer, vertices.data(), Vertex::Size * sizeof(vertices));
+    vertexBuffer.copyData(vertices.data(), Vertex::Size * vertices.size());
 }
 
 MyRenderer::~MyRenderer() = default;
@@ -120,7 +118,7 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
     commandBuffer.setViewport(0, environment.getViewport());
     commandBuffer.setScissor(0, environment.getScissor());
 
-    commandBuffer.bindVertexBuffers(0, *vertexBuffer, { 0 });
+    commandBuffer.bindVertexBuffers(0, *vertexBuffer.buffer, { 0 });
 
     commandBuffer.draw(vertices.size(), 1, 0, 0);
 
@@ -142,28 +140,6 @@ void MyRenderer::recreateSwapchain()
     swapchainFramebuffers.clear();
     environment.recreateSwapchain();
     swapchainFramebuffers = environment.createSwapchainFramebuffers(renderPipeline.renderPass);
-}
-
-void MyRenderer::copyData(const vk::raii::Buffer& dstBuffer, const void* srcData, const vk::DeviceSize size) const
-{
-    const vk::raii::Buffer stagingBuffer = environment.createBuffer(size, vk::BufferUsageFlagBits::eTransferSrc);
-    const vk::raii::DeviceMemory stagingBufferMemory = environment.allocateBufferMemory(stagingBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-    stagingBuffer.bindMemory(*stagingBufferMemory, 0);
-
-    void* dstData = stagingBufferMemory.mapMemory(0, size);
-    std::memcpy(dstData, srcData, size);
-    stagingBufferMemory.unmapMemory();
-
-    const vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
-
-    const vk::BufferCopy copyRegion{
-        .srcOffset = 0,
-        .dstOffset = 0,
-        .size = size
-    };
-    commandBuffer.copyBuffer(*stagingBuffer, *dstBuffer, copyRegion);
-
-    submitSingleTimeCommands(commandBuffer);
 }
 
 vk::raii::CommandBuffer MyRenderer::beginSingleTimeCommands() const

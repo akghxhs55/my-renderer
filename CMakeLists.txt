@@ -9,6 +9,7 @@ add_executable(my_renderer sources/main.cpp
         sources/environment.cpp sources/environment.h
         sources/vertex.cpp sources/vertex.h
         sources/render_pipeline.cpp sources/render_pipeline.h
+        sources/device_local_buffer.cpp sources/device_local_buffer.h
 )
 
 find_package(VulkanLoader REQUIRED)
