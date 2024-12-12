@@ -37,10 +37,10 @@ private:
     static constexpr uint32_t MaxFramesInFlight = 2;
 
     static constexpr std::array<Vertex, 4> vertices = {
-        Vertex{ { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
-        Vertex{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
-        Vertex{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
-        Vertex{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } }
+        Vertex{ { -0.5f, -0.5f }, { 155.0f, 93.0f, 229.0f } },
+        Vertex{ { 0.5f, -0.5f }, { 241.0f, 91.0f, 181.0f } },
+        Vertex{ { 0.5f, 0.5f }, { 254.0f, 228.0f, 64.0f } },
+        Vertex{ { -0.5f, 0.5f }, { 0.0f, 187.0f, 249.0f } }
     };
     static constexpr std::array<uint16_t, 6> indices = {
         0, 1, 2, 2, 3, 0
