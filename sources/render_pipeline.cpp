@@ -6,21 +6,20 @@
 #include <fstream>
 
 
-RenderPipeline::RenderPipeline(const Environment& environment) :
-    environment(environment),
-    pipelineLayout(createPipelineLayout()),
-    renderPass(createRenderPass()),
-    pipeline(createGraphicsPipeline())
+RenderPipeline::RenderPipeline(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout) :
+    pipelineLayout(createPipelineLayout(environment, descriptorSetLayout)),
+    renderPass(createRenderPass(environment)),
+    pipeline(createGraphicsPipeline(environment))
 {
 }
 
 RenderPipeline::~RenderPipeline() = default;
 
-vk::raii::PipelineLayout RenderPipeline::createPipelineLayout() const
+vk::raii::PipelineLayout RenderPipeline::createPipelineLayout(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout)
 {
-    constexpr vk::PipelineLayoutCreateInfo createInfo{
-        .setLayoutCount = 0,
-        .pSetLayouts = nullptr,
+    const vk::PipelineLayoutCreateInfo createInfo{
+        .setLayoutCount = 1,
+        .pSetLayouts = &*descriptorSetLayout,
         .pushConstantRangeCount = 0,
         .pPushConstantRanges = nullptr
     };
@@ -28,7 +27,7 @@ vk::raii::PipelineLayout RenderPipeline::createPipelineLayout() const
     return environment.device.createPipelineLayout(createInfo);
 }
 
-vk::raii::RenderPass RenderPipeline::createRenderPass() const
+vk::raii::RenderPass RenderPipeline::createRenderPass(const Environment& environment)
 {
     const vk::AttachmentDescription colorAttachmentDescription{
         .format = environment.swapchainSurfaceFormat.format,
@@ -73,7 +72,7 @@ vk::raii::RenderPass RenderPipeline::createRenderPass() const
     return environment.device.createRenderPass(createInfo);
 }
 
-vk::raii::Pipeline RenderPipeline::createGraphicsPipeline() const
+vk::raii::Pipeline RenderPipeline::createGraphicsPipeline(const Environment& environment) const
 {
     const vk::raii::ShaderModule vertexShaderModule = createShaderModule(environment.device, readFile("../shaders/vertex.spv"));
     const vk::PipelineShaderStageCreateInfo vertexShaderStageCreateInfo{

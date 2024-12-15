@@ -1,15 +1,25 @@
 #include "my_renderer.h"
 
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <chrono>
+
+
 MyRenderer::MyRenderer() :
     window(WindowTitle, WindowWidth, WindowHeight),
     environment(window, ApplicationName, ApplicationVersion),
-    renderPipeline(environment),
+    vertexBuffer(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
+    indexBuffer(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer),
+    descriptorSetLayout(createDescriptorSetLayout(environment.device)),
+    uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
+    renderPipeline(environment, descriptorSetLayout),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
-    vertexBuffer(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
-    indexBuffer(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer)
+    currentFrame(0)
 {
     vertexBuffer.copyData(vertices.data(), Vertex::Size * vertices.size());
     indexBuffer.copyData(indices.data(), sizeof(indices));
@@ -22,10 +32,26 @@ void MyRenderer::run()
     while (!window.shouldClose())
     {
         glfwPollEvents();
+        update();
         drawFrame();
     }
 
     environment.device.waitIdle();
+}
+
+void MyRenderer::update()
+{
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    const float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    const UniformBufferObject ubo{
+        .model = glm::rotate(glm::mat4(1.0f), deltaTime * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+        .view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+        .projection = -glm::perspective(glm::radians(45.0f), environment.getSwapchainExtent().width / static_cast<float>(environment.getSwapchainExtent().height), 0.1f, 10.0f)
+    };
+    uniformBuffers[currentFrame].copyData(&ubo, sizeof(ubo));
 }
 
 void MyRenderer::drawFrame()
@@ -120,8 +146,8 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
     commandBuffer.setViewport(0, environment.getViewport());
     commandBuffer.setScissor(0, environment.getScissor());
 
-    commandBuffer.bindVertexBuffers(0, *vertexBuffer.buffer, { 0 });
-    commandBuffer.bindIndexBuffer(*indexBuffer.buffer, 0, vk::IndexType::eUint16);
+    commandBuffer.bindVertexBuffers(0, *vertexBuffer.getBuffer(), { 0 });
+    commandBuffer.bindIndexBuffer(*indexBuffer.getBuffer(), 0, vk::IndexType::eUint16);
 
     commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
 
@@ -174,6 +200,36 @@ void MyRenderer::submitSingleTimeCommands(const vk::raii::CommandBuffer& command
 
     environment.graphicsQueue.submit(submitInfo, nullptr);
     environment.graphicsQueue.waitIdle();
+}
+
+vk::raii::DescriptorSetLayout MyRenderer::createDescriptorSetLayout(const vk::raii::Device& device)
+{
+    constexpr vk::DescriptorSetLayoutBinding uboLayoutBinding{
+        .binding = 0,
+        .descriptorType = vk::DescriptorType::eUniformBuffer,
+        .descriptorCount = 1,
+        .stageFlags = vk::ShaderStageFlagBits::eVertex,
+        .pImmutableSamplers = nullptr
+    };
+
+    const vk::DescriptorSetLayoutCreateInfo createInfo{
+        .bindingCount = 1,
+        .pBindings = &uboLayoutBinding
+    };
+
+    return device.createDescriptorSetLayout(createInfo);
+}
+
+std::vector<DeviceLocalBuffer> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
+{
+    std::vector<DeviceLocalBuffer> uniformBuffers;
+    uniformBuffers.reserve(count);
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        uniformBuffers.emplace_back(environment, sizeof(UniformBufferObject), vk::BufferUsageFlagBits::eUniformBuffer);
+    }
+
+    return uniformBuffers;
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)

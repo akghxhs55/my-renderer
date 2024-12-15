@@ -1,6 +1,6 @@
 - [x] Setup Vulkan
 - [x] Implement Drawing
-- [ ] Implement Vertex Buffer and Index Buffer
+- [x] Implement Vertex Buffer and Index Buffer
 - [ ] Implement Texturing
 - [ ] Implement Model Loading
 - [ ] Implement Depth Testing

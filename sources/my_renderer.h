@@ -19,6 +19,12 @@ private:
         vk::raii::Semaphore renderFinishedSemaphore;
         vk::raii::Fence inFlightFence;
     };
+    struct UniformBufferObject
+    {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 projection;
+    };
 
 public:
     MyRenderer();
@@ -37,10 +43,10 @@ private:
     static constexpr uint32_t MaxFramesInFlight = 2;
 
     static constexpr std::array<Vertex, 4> vertices = {
-        Vertex{ { -0.5f, -0.5f }, { 155.0f, 93.0f, 229.0f } },
-        Vertex{ { 0.5f, -0.5f }, { 241.0f, 91.0f, 181.0f } },
-        Vertex{ { 0.5f, 0.5f }, { 254.0f, 228.0f, 64.0f } },
-        Vertex{ { -0.5f, 0.5f }, { 0.0f, 187.0f, 249.0f } }
+        Vertex{ { -0.5f, -0.5f }, { 255.0f, 0.0f, 0.0f } },
+        Vertex{ { 0.5f, -0.5f }, { 0.0f, 255.0f, 0.0f } },
+        Vertex{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 255.0f } },
+        Vertex{ { -0.5f, 0.5f }, { 255.0f, 255.0f, 255.0f } }
     };
     static constexpr std::array<uint16_t, 6> indices = {
         0, 1, 2, 2, 3, 0
@@ -48,14 +54,17 @@ private:
 
     Window window;
     Environment environment;
+    DeviceLocalBuffer vertexBuffer;
+    DeviceLocalBuffer indexBuffer;
+    vk::raii::DescriptorSetLayout descriptorSetLayout;
+    std::vector<DeviceLocalBuffer> uniformBuffers;
     RenderPipeline renderPipeline;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     const std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
     const std::vector<SyncObjects> syncObjects;
-    uint32_t currentFrame = 0;
-    DeviceLocalBuffer vertexBuffer;
-    DeviceLocalBuffer indexBuffer;
+    uint32_t currentFrame;
 
+    void update();
     void drawFrame();
 
     void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
@@ -63,6 +72,8 @@ private:
     vk::raii::CommandBuffer beginSingleTimeCommands() const;
     void submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
 
+    static vk::raii::DescriptorSetLayout createDescriptorSetLayout(const vk::raii::Device& device);
+    static std::vector<DeviceLocalBuffer> createUniformBuffers(const Environment& environment, const uint32_t count);
     static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };
 

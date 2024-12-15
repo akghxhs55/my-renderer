@@ -7,20 +7,19 @@
 
 class RenderPipeline {
 public:
-    explicit RenderPipeline(const Environment& environment);
+    explicit RenderPipeline(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
     ~RenderPipeline();
 
 private:
-    const Environment& environment;
     const vk::raii::PipelineLayout pipelineLayout;
 public:
     const vk::raii::RenderPass renderPass;
     const vk::raii::Pipeline pipeline;
 
 private:
-    vk::raii::PipelineLayout createPipelineLayout() const;
-    vk::raii::RenderPass createRenderPass() const;
-    vk::raii::Pipeline createGraphicsPipeline() const;
+    static vk::raii::PipelineLayout createPipelineLayout(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
+    static vk::raii::RenderPass createRenderPass(const Environment& environment);
+    vk::raii::Pipeline createGraphicsPipeline(const Environment& environment) const;
 
     static vk::raii::ShaderModule createShaderModule(const vk::raii::Device& device, const std::vector<char>& code);
     static std::vector<char> readFile(const std::string& filename);

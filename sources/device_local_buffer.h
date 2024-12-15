@@ -11,17 +11,22 @@
 
 class DeviceLocalBuffer {
 private:
-    const Environment& environment;
-    const vk::DeviceSize size;
-public:
-    const vk::raii::Buffer buffer;
-private:
-    const vk::raii::DeviceMemory bufferMemory;
+    std::reference_wrapper<const Environment> environment;
+    vk::DeviceSize size;
+    vk::raii::Buffer buffer;
+    vk::raii::DeviceMemory bufferMemory;
 
 public:
     DeviceLocalBuffer(const Environment& environment, const vk::DeviceSize size, const vk::BufferUsageFlags usage);
     ~DeviceLocalBuffer();
 
+    DeviceLocalBuffer(const DeviceLocalBuffer&) = delete;
+    DeviceLocalBuffer& operator=(const DeviceLocalBuffer&) = delete;
+
+    DeviceLocalBuffer(DeviceLocalBuffer&& other) noexcept;
+    DeviceLocalBuffer& operator=(DeviceLocalBuffer&& other) noexcept;
+
+    const vk::raii::Buffer& getBuffer() const;
     void copyData(const void* srcData, const vk::DeviceSize dataSize) const;
 
 private:
