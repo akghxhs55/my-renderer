@@ -12,7 +12,7 @@
 
 
 class Environment {
-public:
+private:
     struct QueueFamilyIndices {
         const std::optional<uint32_t> graphicsFamily;
         const std::optional<uint32_t> presentFamily;
