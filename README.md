@@ -2,7 +2,7 @@
 - [x] Implement Drawing
 - [x] Implement Vertex Buffer and Index Buffer
 - [ ] Implement Texturing
-- [ ] Implement Model Loading
 - [ ] Implement Depth Testing
+- [ ] Implement Model Loading
 - [ ] Implement Scene Graph
 - [ ] Implement Shadow Mapping
