@@ -2,14 +2,11 @@
 #define DEVICE_LOCAL_BUFFER_H
 
 
-#define VULKAN_HPP_NO_CONSTRUCTORS
-#include <vulkan/vulkan_raii.hpp>
-
-
 #include "environment.h"
+#include "i_buffer.h"
 
 
-class DeviceLocalBuffer {
+class DeviceLocalBuffer : public IBuffer {
 private:
     std::reference_wrapper<const Environment> environment;
     vk::DeviceSize size;
@@ -18,7 +15,7 @@ private:
 
 public:
     DeviceLocalBuffer(const Environment& environment, const vk::DeviceSize size, const vk::BufferUsageFlags usage);
-    ~DeviceLocalBuffer();
+    ~DeviceLocalBuffer() override;
 
     DeviceLocalBuffer(const DeviceLocalBuffer&) = delete;
     DeviceLocalBuffer& operator=(const DeviceLocalBuffer&) = delete;
@@ -26,8 +23,8 @@ public:
     DeviceLocalBuffer(DeviceLocalBuffer&& other) noexcept;
     DeviceLocalBuffer& operator=(DeviceLocalBuffer&& other) noexcept;
 
-    const vk::raii::Buffer& getBuffer() const;
-    void copyData(const void* srcData, const vk::DeviceSize dataSize) const;
+    const vk::raii::Buffer& getBuffer() const override;
+    void uploadData(const void* sourceData, const vk::DeviceSize dataSize) const override;
 
 private:
     vk::raii::Buffer createBuffer(const vk::DeviceSize size, const vk::BufferUsageFlags usage) const;

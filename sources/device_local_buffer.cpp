@@ -41,7 +41,7 @@ const vk::raii::Buffer& DeviceLocalBuffer::getBuffer() const
     return buffer;
 }
 
-void DeviceLocalBuffer::copyData(const void* srcData, const vk::DeviceSize dataSize) const
+void DeviceLocalBuffer::uploadData(const void* sourceData, const vk::DeviceSize dataSize) const
 {
     if (dataSize > size)
     {
@@ -53,7 +53,7 @@ void DeviceLocalBuffer::copyData(const void* srcData, const vk::DeviceSize dataS
     stagingBuffer.bindMemory(*stagingBufferMemory, 0);
 
     void *data = stagingBufferMemory.mapMemory(0, dataSize);
-    std::memcpy(data, srcData, dataSize);
+    std::memcpy(data, sourceData, dataSize);
     stagingBufferMemory.unmapMemory();
 
     const vk::raii::CommandBuffer commandBuffer = std::move(environment.get().createGraphicsCommandBuffers(1)[0]);

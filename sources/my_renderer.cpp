@@ -11,8 +11,8 @@
 MyRenderer::MyRenderer() :
     window(WindowTitle, WindowWidth, WindowHeight),
     environment(window, ApplicationName, ApplicationVersion),
-    vertexBuffer(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
-    indexBuffer(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer),
+    vertexBuffer(std::make_unique<DeviceLocalBuffer>(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)),
+    indexBuffer(std::make_unique<DeviceLocalBuffer>(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer)),
     descriptorSetLayout(createDescriptorSetLayout(environment.device)),
     descriptorPool(createDescriptorPool(environment, MaxFramesInFlight)),
     descriptorSets(createDescriptorSets(environment.device, descriptorPool, descriptorSetLayout, MaxFramesInFlight)),
@@ -23,13 +23,13 @@ MyRenderer::MyRenderer() :
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
     currentFrame(0)
 {
-    vertexBuffer.copyData(vertices.data(), Vertex::Size * vertices.size());
-    indexBuffer.copyData(indices.data(), sizeof(indices));
+    vertexBuffer->uploadData(vertices.data(), Vertex::Size * vertices.size());
+    indexBuffer->uploadData(indices.data(), sizeof(indices));
 
     for (uint32_t i = 0; i < MaxFramesInFlight; ++i)
     {
         const vk::DescriptorBufferInfo bufferInfo{
-            .buffer = *uniformBuffers[i].getBuffer(),
+            .buffer = *uniformBuffers[i]->getBuffer(),
             .offset = 0,
             .range = sizeof(UniformBufferObject)
         };
@@ -76,7 +76,8 @@ void MyRenderer::update() const
         .projection = glm::perspective(glm::radians(45.0f), environment.getSwapchainExtent().width / static_cast<float>(environment.getSwapchainExtent().height), 0.1f, 10.0f)
     };
     ubo.projection[1][1] *= -1;
-    uniformBuffers[currentFrame].copyData(&ubo, sizeof(ubo));
+
+    uniformBuffers[currentFrame]->uploadData(&ubo, sizeof(ubo));
 }
 
 void MyRenderer::drawFrame()
@@ -170,8 +171,8 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
     commandBuffer.setViewport(0, environment.getViewport());
     commandBuffer.setScissor(0, environment.getScissor());
 
-    commandBuffer.bindVertexBuffers(0, *vertexBuffer.getBuffer(), { 0 });
-    commandBuffer.bindIndexBuffer(*indexBuffer.getBuffer(), 0, vk::IndexType::eUint16);
+    commandBuffer.bindVertexBuffers(0, *vertexBuffer->getBuffer(), { 0 });
+    commandBuffer.bindIndexBuffer(*indexBuffer->getBuffer(), 0, vk::IndexType::eUint16);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *renderPipeline.pipelineLayout, 0, *descriptorSets[currentFrame], nullptr);
 
     commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
@@ -277,13 +278,13 @@ std::vector<vk::raii::DescriptorSet> MyRenderer::createDescriptorSets(const vk::
     return device.allocateDescriptorSets(allocateInfo);
 }
 
-std::vector<DeviceLocalBuffer> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
+std::vector<std::unique_ptr<IBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
 {
-    std::vector<DeviceLocalBuffer> uniformBuffers;
+    std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
     uniformBuffers.reserve(count);
     for (uint32_t i = 0; i < count; ++i)
     {
-        uniformBuffers.emplace_back(environment, sizeof(UniformBufferObject), vk::BufferUsageFlagBits::eUniformBuffer);
+        uniformBuffers.emplace_back(std::make_unique<DeviceLocalBuffer>(environment, sizeof(UniformBufferObject), vk::BufferUsageFlagBits::eUniformBuffer));
     }
 
     return uniformBuffers;
