@@ -9,8 +9,7 @@
 #include "environment.h"
 #include "render_pipeline.h"
 #include "vertex.h"
-#include "device_local_buffer.h"
-#include "host_visible_buffer.h"
+#include "abstract_buffer.h"
 
 
 class MyRenderer {

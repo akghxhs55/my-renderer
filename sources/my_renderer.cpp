@@ -5,6 +5,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "device_local_buffer.h"
+#include "host_visible_buffer.h"
+
 #include <chrono>
 
 
