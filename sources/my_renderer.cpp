@@ -14,6 +14,8 @@ MyRenderer::MyRenderer() :
     vertexBuffer(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
     indexBuffer(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer),
     descriptorSetLayout(createDescriptorSetLayout(environment.device)),
+    descriptorPool(createDescriptorPool(environment, MaxFramesInFlight)),
+    descriptorSets(createDescriptorSets(environment.device, descriptorPool, descriptorSetLayout, MaxFramesInFlight)),
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
     renderPipeline(environment, descriptorSetLayout),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
@@ -23,6 +25,28 @@ MyRenderer::MyRenderer() :
 {
     vertexBuffer.copyData(vertices.data(), Vertex::Size * vertices.size());
     indexBuffer.copyData(indices.data(), sizeof(indices));
+
+    for (uint32_t i = 0; i < MaxFramesInFlight; ++i)
+    {
+        const vk::DescriptorBufferInfo bufferInfo{
+            .buffer = *uniformBuffers[i].getBuffer(),
+            .offset = 0,
+            .range = sizeof(UniformBufferObject)
+        };
+
+        const vk::WriteDescriptorSet descriptorWrite{
+            .dstSet = *descriptorSets[i],
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eUniformBuffer,
+            .pBufferInfo = &bufferInfo,
+            .pImageInfo = nullptr,
+            .pTexelBufferView = nullptr
+        };
+
+        environment.device.updateDescriptorSets({ descriptorWrite }, nullptr);
+    }
 }
 
 MyRenderer::~MyRenderer() = default;
@@ -39,18 +63,19 @@ void MyRenderer::run()
     environment.device.waitIdle();
 }
 
-void MyRenderer::update()
+void MyRenderer::update() const
 {
     static auto startTime = std::chrono::high_resolution_clock::now();
 
     const auto currentTime = std::chrono::high_resolution_clock::now();
     const float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    const UniformBufferObject ubo{
+    UniformBufferObject ubo{
         .model = glm::rotate(glm::mat4(1.0f), deltaTime * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
         .view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-        .projection = -glm::perspective(glm::radians(45.0f), environment.getSwapchainExtent().width / static_cast<float>(environment.getSwapchainExtent().height), 0.1f, 10.0f)
+        .projection = glm::perspective(glm::radians(45.0f), environment.getSwapchainExtent().width / static_cast<float>(environment.getSwapchainExtent().height), 0.1f, 10.0f)
     };
+    ubo.projection[1][1] *= -1;
     uniformBuffers[currentFrame].copyData(&ubo, sizeof(ubo));
 }
 
@@ -140,7 +165,6 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
     };
 
     commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *renderPipeline.pipeline);
 
     commandBuffer.setViewport(0, environment.getViewport());
@@ -148,6 +172,7 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
 
     commandBuffer.bindVertexBuffers(0, *vertexBuffer.getBuffer(), { 0 });
     commandBuffer.bindIndexBuffer(*indexBuffer.getBuffer(), 0, vk::IndexType::eUint16);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *renderPipeline.pipelineLayout, 0, *descriptorSets[currentFrame], nullptr);
 
     commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
 
@@ -218,6 +243,38 @@ vk::raii::DescriptorSetLayout MyRenderer::createDescriptorSetLayout(const vk::ra
     };
 
     return device.createDescriptorSetLayout(createInfo);
+}
+
+vk::raii::DescriptorPool MyRenderer::createDescriptorPool(const Environment& environment, const uint32_t count)
+{
+    const vk::DescriptorPoolSize poolSize{
+        .type = vk::DescriptorType::eUniformBuffer,
+        .descriptorCount = count
+    };
+
+    const vk::DescriptorPoolCreateInfo createInfo{
+        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets = count,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize
+    };
+
+    return environment.device.createDescriptorPool(createInfo);
+}
+
+std::vector<vk::raii::DescriptorSet> MyRenderer::createDescriptorSets(const vk::raii::Device& device,
+    const vk::raii::DescriptorPool& descriptorPool, const vk::raii::DescriptorSetLayout& descriptorSetLayout,
+    const uint32_t count)
+{
+    const std::vector<vk::DescriptorSetLayout> layouts(count, *descriptorSetLayout);
+
+    const vk::DescriptorSetAllocateInfo allocateInfo{
+        .descriptorPool = *descriptorPool,
+        .descriptorSetCount = count,
+        .pSetLayouts = layouts.data()
+    };
+
+    return device.allocateDescriptorSets(allocateInfo);
 }
 
 std::vector<DeviceLocalBuffer> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)

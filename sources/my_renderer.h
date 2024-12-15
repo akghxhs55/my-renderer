@@ -43,10 +43,10 @@ private:
     static constexpr uint32_t MaxFramesInFlight = 2;
 
     static constexpr std::array<Vertex, 4> vertices = {
-        Vertex{ { -0.5f, -0.5f }, { 255.0f, 0.0f, 0.0f } },
-        Vertex{ { 0.5f, -0.5f }, { 0.0f, 255.0f, 0.0f } },
-        Vertex{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 255.0f } },
-        Vertex{ { -0.5f, 0.5f }, { 255.0f, 255.0f, 255.0f } }
+        Vertex{ { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+        Vertex{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
+        Vertex{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
+        Vertex{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } }
     };
     static constexpr std::array<uint16_t, 6> indices = {
         0, 1, 2, 2, 3, 0
@@ -57,14 +57,16 @@ private:
     DeviceLocalBuffer vertexBuffer;
     DeviceLocalBuffer indexBuffer;
     vk::raii::DescriptorSetLayout descriptorSetLayout;
+    vk::raii::DescriptorPool descriptorPool;
+    std::vector<vk::raii::DescriptorSet> descriptorSets;
     std::vector<DeviceLocalBuffer> uniformBuffers;
     RenderPipeline renderPipeline;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
-    const std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
-    const std::vector<SyncObjects> syncObjects;
+    std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
+    std::vector<SyncObjects> syncObjects;
     uint32_t currentFrame;
 
-    void update();
+    void update() const;
     void drawFrame();
 
     void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
@@ -73,6 +75,8 @@ private:
     void submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
 
     static vk::raii::DescriptorSetLayout createDescriptorSetLayout(const vk::raii::Device& device);
+    static vk::raii::DescriptorPool createDescriptorPool(const Environment& environment, const uint32_t count);
+    static std::vector<vk::raii::DescriptorSet> createDescriptorSets(const vk::raii::Device& device, const vk::raii::DescriptorPool& descriptorPool, const vk::raii::DescriptorSetLayout& descriptorSetLayout, const uint32_t count);
     static std::vector<DeviceLocalBuffer> createUniformBuffers(const Environment& environment, const uint32_t count);
     static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };

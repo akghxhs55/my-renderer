@@ -10,9 +10,8 @@ public:
     explicit RenderPipeline(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
     ~RenderPipeline();
 
-private:
-    const vk::raii::PipelineLayout pipelineLayout;
 public:
+    const vk::raii::PipelineLayout pipelineLayout;
     const vk::raii::RenderPass renderPass;
     const vk::raii::Pipeline pipeline;
 
