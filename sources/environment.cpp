@@ -5,7 +5,7 @@
 #include <set>
 
 
-Environment::Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion) :
+Environment::Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion, const uint32_t maxFramesInFlight) :
     window(window),
     context(),
     instance(createInstance(applicationName, applicationVersion)),
@@ -17,6 +17,7 @@ Environment::Environment(const Window& window, const char* applicationName, cons
     graphicsQueue(device.getQueue(queueFamilyIndices.graphicsFamily.value(), 0)),
     presentQueue(device.getQueue(queueFamilyIndices.presentFamily.value(), 0)),
     graphicsCommandPool(createCommandPool(queueFamilyIndices.graphicsFamily.value())),
+    descriptorPool(createDescriptorPool(maxFramesInFlight)),
     swapchainSurfaceFormat(chooseSwapchainSurfaceFormat(querySwapchainSupport(physicalDevice).formats)),
     swapchainExtent(chooseSwapchainExtent(querySwapchainSupport(physicalDevice).capabilities)),
     swapchain(createSwapchain()),
@@ -26,6 +27,20 @@ Environment::Environment(const Window& window, const char* applicationName, cons
 }
 
 Environment::~Environment() = default;
+
+std::vector<vk::raii::DescriptorSet> Environment::createDescriptorSets(
+    const vk::raii::DescriptorSetLayout& descriptorSetLayout, const uint32_t count) const
+{
+    const std::vector<vk::DescriptorSetLayout> layouts(count, *descriptorSetLayout);
+
+    const vk::DescriptorSetAllocateInfo allocateInfo{
+        .descriptorPool = *descriptorPool,
+        .descriptorSetCount = count,
+        .pSetLayouts = layouts.data()
+    };
+
+    return device.allocateDescriptorSets(allocateInfo);
+}
 
 std::vector<vk::raii::Framebuffer> Environment::createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const
 {
@@ -230,6 +245,23 @@ vk::raii::CommandPool Environment::createCommandPool(const uint32_t queueFamilyI
     };
 
     return device.createCommandPool(createInfo);
+}
+
+vk::raii::DescriptorPool Environment::createDescriptorPool(const uint32_t count) const
+{
+    const vk::DescriptorPoolSize poolSize{
+        .type = vk::DescriptorType::eUniformBuffer,
+        .descriptorCount = count
+    };
+
+    const vk::DescriptorPoolCreateInfo createInfo{
+        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets = count,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize
+    };
+
+    return device.createDescriptorPool(createInfo);
 }
 
 vk::raii::SwapchainKHR Environment::createSwapchain() const

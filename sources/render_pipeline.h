@@ -7,16 +7,18 @@
 
 class RenderPipeline {
 public:
+    const vk::raii::DescriptorSetLayout descriptorSetLayout;
     const vk::raii::PipelineLayout pipelineLayout;
     const vk::raii::RenderPass renderPass;
     const vk::raii::Pipeline pipeline;
 
 public:
-    explicit RenderPipeline(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
+    explicit RenderPipeline(const Environment& environment);
     ~RenderPipeline();
 
 private:
-    static vk::raii::PipelineLayout createPipelineLayout(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
+    static vk::raii::DescriptorSetLayout createDescriptorSetLayout(const Environment& environment);
+    vk::raii::PipelineLayout createPipelineLayout(const Environment& environment) const;
     static vk::raii::RenderPass createRenderPass(const Environment& environment);
     vk::raii::Pipeline createGraphicsPipeline(const Environment& environment) const;
 

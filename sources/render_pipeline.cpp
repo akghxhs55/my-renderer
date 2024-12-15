@@ -6,8 +6,9 @@
 #include <fstream>
 
 
-RenderPipeline::RenderPipeline(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout) :
-    pipelineLayout(createPipelineLayout(environment, descriptorSetLayout)),
+RenderPipeline::RenderPipeline(const Environment& environment) :
+    descriptorSetLayout(createDescriptorSetLayout(environment)),
+    pipelineLayout(createPipelineLayout(environment)),
     renderPass(createRenderPass(environment)),
     pipeline(createGraphicsPipeline(environment))
 {
@@ -15,7 +16,25 @@ RenderPipeline::RenderPipeline(const Environment& environment, const vk::raii::D
 
 RenderPipeline::~RenderPipeline() = default;
 
-vk::raii::PipelineLayout RenderPipeline::createPipelineLayout(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout)
+vk::raii::DescriptorSetLayout RenderPipeline::createDescriptorSetLayout(const Environment& environment)
+{
+    constexpr vk::DescriptorSetLayoutBinding uboLayoutBinding{
+        .binding = 0,
+        .descriptorType = vk::DescriptorType::eUniformBuffer,
+        .descriptorCount = 1,
+        .stageFlags = vk::ShaderStageFlagBits::eVertex,
+        .pImmutableSamplers = nullptr
+    };
+
+    const vk::DescriptorSetLayoutCreateInfo createInfo{
+        .bindingCount = 1,
+        .pBindings = &uboLayoutBinding
+    };
+
+    return environment.device.createDescriptorSetLayout(createInfo);
+}
+
+vk::raii::PipelineLayout RenderPipeline::createPipelineLayout(const Environment& environment) const
 {
     const vk::PipelineLayoutCreateInfo createInfo{
         .setLayoutCount = 1,

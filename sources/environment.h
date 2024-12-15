@@ -66,6 +66,7 @@ public:
     const vk::raii::Queue presentQueue;
 private:
     const vk::raii::CommandPool graphicsCommandPool;
+    const vk::raii::DescriptorPool descriptorPool;
 public:
     const vk::SurfaceFormatKHR swapchainSurfaceFormat;
 private:
@@ -75,9 +76,10 @@ private:
     std::vector<vk::raii::ImageView> swapchainImageViews;
 
 public:
-    Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion);
+    Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion, const uint32_t maxFramesInFlight);
     ~Environment();
 
+    std::vector<vk::raii::DescriptorSet> createDescriptorSets(const vk::raii::DescriptorSetLayout& descriptorSetLayout, const uint32_t count) const;
     std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const;
     std::vector<vk::raii::CommandBuffer> createGraphicsCommandBuffers(const uint32_t count, const vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary) const;
     vk::raii::Semaphore createSemaphore(const vk::SemaphoreCreateFlags flags = {}) const;
@@ -111,6 +113,7 @@ private:
     vk::raii::PhysicalDevice selectPhysicalDevice() const;
     vk::raii::Device createDevice() const;
     vk::raii::CommandPool createCommandPool(const uint32_t queueFamilyIndex) const;
+    vk::raii::DescriptorPool createDescriptorPool(const uint32_t count) const;
     vk::raii::SwapchainKHR createSwapchain() const;
     std::vector<vk::raii::ImageView> createSwapchainImageViews() const;
 

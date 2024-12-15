@@ -10,14 +10,12 @@
 
 MyRenderer::MyRenderer() :
     window(WindowTitle, WindowWidth, WindowHeight),
-    environment(window, ApplicationName, ApplicationVersion),
+    environment(window, ApplicationName, ApplicationVersion, MaxFramesInFlight),
+    renderPipeline(environment),
     vertexBuffer(std::make_unique<DeviceLocalBuffer>(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)),
     indexBuffer(std::make_unique<DeviceLocalBuffer>(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer)),
-    descriptorSetLayout(createDescriptorSetLayout(environment.device)),
-    descriptorPool(createDescriptorPool(environment, MaxFramesInFlight)),
-    descriptorSets(createDescriptorSets(environment.device, descriptorPool, descriptorSetLayout, MaxFramesInFlight)),
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
-    renderPipeline(environment, descriptorSetLayout),
+    descriptorSets(environment.createDescriptorSets(renderPipeline.descriptorSetLayout, MaxFramesInFlight)),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
@@ -226,56 +224,6 @@ void MyRenderer::submitSingleTimeCommands(const vk::raii::CommandBuffer& command
 
     environment.graphicsQueue.submit(submitInfo, nullptr);
     environment.graphicsQueue.waitIdle();
-}
-
-vk::raii::DescriptorSetLayout MyRenderer::createDescriptorSetLayout(const vk::raii::Device& device)
-{
-    constexpr vk::DescriptorSetLayoutBinding uboLayoutBinding{
-        .binding = 0,
-        .descriptorType = vk::DescriptorType::eUniformBuffer,
-        .descriptorCount = 1,
-        .stageFlags = vk::ShaderStageFlagBits::eVertex,
-        .pImmutableSamplers = nullptr
-    };
-
-    const vk::DescriptorSetLayoutCreateInfo createInfo{
-        .bindingCount = 1,
-        .pBindings = &uboLayoutBinding
-    };
-
-    return device.createDescriptorSetLayout(createInfo);
-}
-
-vk::raii::DescriptorPool MyRenderer::createDescriptorPool(const Environment& environment, const uint32_t count)
-{
-    const vk::DescriptorPoolSize poolSize{
-        .type = vk::DescriptorType::eUniformBuffer,
-        .descriptorCount = count
-    };
-
-    const vk::DescriptorPoolCreateInfo createInfo{
-        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-        .maxSets = count,
-        .poolSizeCount = 1,
-        .pPoolSizes = &poolSize
-    };
-
-    return environment.device.createDescriptorPool(createInfo);
-}
-
-std::vector<vk::raii::DescriptorSet> MyRenderer::createDescriptorSets(const vk::raii::Device& device,
-    const vk::raii::DescriptorPool& descriptorPool, const vk::raii::DescriptorSetLayout& descriptorSetLayout,
-    const uint32_t count)
-{
-    const std::vector<vk::DescriptorSetLayout> layouts(count, *descriptorSetLayout);
-
-    const vk::DescriptorSetAllocateInfo allocateInfo{
-        .descriptorPool = *descriptorPool,
-        .descriptorSetCount = count,
-        .pSetLayouts = layouts.data()
-    };
-
-    return device.allocateDescriptorSets(allocateInfo);
 }
 
 std::vector<std::unique_ptr<AbstractBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
