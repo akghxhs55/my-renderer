@@ -278,13 +278,13 @@ std::vector<vk::raii::DescriptorSet> MyRenderer::createDescriptorSets(const vk::
     return device.allocateDescriptorSets(allocateInfo);
 }
 
-std::vector<std::unique_ptr<IBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
+std::vector<std::unique_ptr<AbstractBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
 {
-    std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
+    std::vector<std::unique_ptr<AbstractBuffer>> uniformBuffers;
     uniformBuffers.reserve(count);
     for (uint32_t i = 0; i < count; ++i)
     {
-        uniformBuffers.emplace_back(std::make_unique<DeviceLocalBuffer>(environment, sizeof(UniformBufferObject), vk::BufferUsageFlagBits::eUniformBuffer));
+        uniformBuffers.emplace_back(std::make_unique<HostVisibleBuffer>(environment, sizeof(UniformBufferObject), vk::BufferUsageFlagBits::eUniformBuffer));
     }
 
     return uniformBuffers;

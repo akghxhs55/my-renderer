@@ -10,6 +10,7 @@
 #include "render_pipeline.h"
 #include "vertex.h"
 #include "device_local_buffer.h"
+#include "host_visible_buffer.h"
 
 
 class MyRenderer {
@@ -54,12 +55,12 @@ private:
 
     Window window;
     Environment environment;
-    std::unique_ptr<IBuffer> vertexBuffer;
-    std::unique_ptr<IBuffer> indexBuffer;
+    std::unique_ptr<AbstractBuffer> vertexBuffer;
+    std::unique_ptr<AbstractBuffer> indexBuffer;
     vk::raii::DescriptorSetLayout descriptorSetLayout;
     vk::raii::DescriptorPool descriptorPool;
     std::vector<vk::raii::DescriptorSet> descriptorSets;
-    std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
+    std::vector<std::unique_ptr<AbstractBuffer>> uniformBuffers;
     RenderPipeline renderPipeline;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
@@ -77,7 +78,7 @@ private:
     static vk::raii::DescriptorSetLayout createDescriptorSetLayout(const vk::raii::Device& device);
     static vk::raii::DescriptorPool createDescriptorPool(const Environment& environment, const uint32_t count);
     static std::vector<vk::raii::DescriptorSet> createDescriptorSets(const vk::raii::Device& device, const vk::raii::DescriptorPool& descriptorPool, const vk::raii::DescriptorSetLayout& descriptorSetLayout, const uint32_t count);
-    static std::vector<std::unique_ptr<IBuffer>> createUniformBuffers(const Environment& environment, const uint32_t count);
+    static std::vector<std::unique_ptr<AbstractBuffer>> createUniformBuffers(const Environment& environment, const uint32_t count);
     static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };
 

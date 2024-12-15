@@ -2,9 +2,7 @@
 
 
 DeviceLocalBuffer::DeviceLocalBuffer(const Environment& environment, const vk::DeviceSize size, const vk::BufferUsageFlags usage) :
-    environment(environment),
-    size(size),
-    buffer(createBuffer(size, usage)),
+    AbstractBuffer(environment, size, usage),
     bufferMemory(allocateBufferMemory(buffer, vk::MemoryPropertyFlagBits::eDeviceLocal))
 {
     buffer.bindMemory(*bufferMemory, 0);
@@ -13,9 +11,7 @@ DeviceLocalBuffer::DeviceLocalBuffer(const Environment& environment, const vk::D
 DeviceLocalBuffer::~DeviceLocalBuffer() = default;
 
 DeviceLocalBuffer::DeviceLocalBuffer(DeviceLocalBuffer&& other) noexcept :
-    environment(other.environment),
-    size(other.size),
-    buffer(std::move(other.buffer)),
+    AbstractBuffer(std::move(other)),
     bufferMemory(std::move(other.bufferMemory))
 {
     other.size = 0;
@@ -25,20 +21,13 @@ DeviceLocalBuffer& DeviceLocalBuffer::operator=(DeviceLocalBuffer&& other) noexc
 {
     if (this != &other)
     {
-        environment = other.environment;
-        size = other.size;
-        buffer = std::move(other.buffer);
+        AbstractBuffer::operator=(std::move(other));
         bufferMemory = std::move(other.bufferMemory);
 
         other.size = 0;
     }
 
     return *this;
-}
-
-const vk::raii::Buffer& DeviceLocalBuffer::getBuffer() const
-{
-    return buffer;
 }
 
 void DeviceLocalBuffer::uploadData(const void* sourceData, const vk::DeviceSize dataSize) const
@@ -85,45 +74,4 @@ void DeviceLocalBuffer::uploadData(const void* sourceData, const vk::DeviceSize 
 
     environment.get().graphicsQueue.submit(submitInfo, nullptr);
     environment.get().graphicsQueue.waitIdle();
-}
-
-vk::raii::Buffer DeviceLocalBuffer::createBuffer(const vk::DeviceSize size, const vk::BufferUsageFlags usage) const
-{
-    const vk::BufferCreateInfo createInfo{
-        .size = size,
-        .usage = usage | vk::BufferUsageFlagBits::eTransferDst,
-        .sharingMode = vk::SharingMode::eExclusive,
-        .queueFamilyIndexCount = 0,
-        .pQueueFamilyIndices = nullptr
-    };
-
-    return environment.get().device.createBuffer(createInfo);
-}
-
-vk::raii::DeviceMemory DeviceLocalBuffer::allocateBufferMemory(const vk::raii::Buffer& buffer, const vk::MemoryPropertyFlags properties) const
-{
-    const vk::MemoryRequirements memoryRequirements = buffer.getMemoryRequirements();
-
-    const vk::MemoryAllocateInfo allocateInfo{
-        .allocationSize = memoryRequirements.size,
-        .memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties)
-    };
-
-    return environment.get().device.allocateMemory(allocateInfo);
-}
-
-uint32_t DeviceLocalBuffer::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const
-{
-    const vk::PhysicalDeviceMemoryProperties memoryProperties = environment.get().physicalDevice.getMemoryProperties();
-
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
-    {
-        if ((typeFilter & (1 << i)) and
-            (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
-        {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("Failed to find suitable memory type.");
 }
