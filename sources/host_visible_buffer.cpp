@@ -3,7 +3,7 @@
 HostVisibleBuffer::HostVisibleBuffer(const Environment& environment, const vk::DeviceSize size,
     const vk::BufferUsageFlags usage) :
     AbstractBuffer(environment, size, usage),
-    bufferMemory(allocateBufferMemory(buffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)),
+    bufferMemory(allocateBufferMemory(vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)),
     mappedMemory(nullptr)
 {
     buffer.bindMemory(*bufferMemory, 0);
@@ -20,7 +20,6 @@ HostVisibleBuffer::HostVisibleBuffer(HostVisibleBuffer&& other) noexcept :
     bufferMemory(std::move(other.bufferMemory)),
     mappedMemory(other.mappedMemory)
 {
-    other.size = 0;
     other.mappedMemory = nullptr;
 }
 
@@ -31,7 +30,6 @@ HostVisibleBuffer& HostVisibleBuffer::operator=(HostVisibleBuffer&& other) noexc
         AbstractBuffer::operator=(std::move(other));
         bufferMemory = std::move(other.bufferMemory);
 
-        other.size = 0;
         other.mappedMemory = nullptr;
     }
 

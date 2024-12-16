@@ -135,6 +135,54 @@ void Environment::recreateSwapchain()
     swapchainImageViews = createSwapchainImageViews();
 }
 
+uint32_t Environment::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const
+{
+    const vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDevice.getMemoryProperties();
+
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+    {
+        if ((typeFilter & (1 << i)) and
+            (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("Failed to find suitable memory type.");
+}
+
+
+vk::raii::CommandBuffer Environment::beginSingleTimeCommands() const
+{
+    vk::raii::CommandBuffer commandBuffer = std::move(createGraphicsCommandBuffers(1)[0]);
+
+    constexpr vk::CommandBufferBeginInfo beginInfo{
+        .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+    };
+
+    commandBuffer.begin(beginInfo);
+
+    return commandBuffer;
+}
+
+void Environment::submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const
+{
+    commandBuffer.end();
+
+    const vk::SubmitInfo submitInfo{
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .pWaitDstStageMask = nullptr,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &*commandBuffer,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr
+    };
+
+    graphicsQueue.submit(submitInfo, nullptr);
+    graphicsQueue.waitIdle();
+}
+
 vk::raii::Instance Environment::createInstance(const char* applicationName, const uint32_t applicationVersion) const
 {
     void* pNext = nullptr;
@@ -483,20 +531,4 @@ vk::Bool32 Environment::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT mes
 {
     std::cerr << "[Validation layer] " << pCallbackData->pMessage << std::endl;
     return vk::False;
-}
-
-uint32_t Environment::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const
-{
-    const vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDevice.getMemoryProperties();
-
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
-    {
-        if ((typeFilter & (1 << i)) and
-            (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
-        {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("Failed to find suitable memory type.");
 }

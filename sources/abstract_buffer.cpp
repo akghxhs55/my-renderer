@@ -29,31 +29,14 @@ vk::raii::Buffer AbstractBuffer::createBuffer(const vk::DeviceSize size, const v
     return environment.get().device.createBuffer(createInfo);
 }
 
-vk::raii::DeviceMemory AbstractBuffer::allocateBufferMemory(const vk::raii::Buffer& buffer,
-    const vk::MemoryPropertyFlags properties) const
+vk::raii::DeviceMemory AbstractBuffer::allocateBufferMemory(const vk::MemoryPropertyFlags properties) const
 {
     const vk::MemoryRequirements memoryRequirements = buffer.getMemoryRequirements();
 
     const vk::MemoryAllocateInfo allocateInfo{
         .allocationSize = memoryRequirements.size,
-        .memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties)
+        .memoryTypeIndex = environment.get().findMemoryType(memoryRequirements.memoryTypeBits, properties)
     };
 
     return environment.get().device.allocateMemory(allocateInfo);
-}
-
-uint32_t AbstractBuffer::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const
-{
-    const vk::PhysicalDeviceMemoryProperties memoryProperties = environment.get().physicalDevice.getMemoryProperties();
-
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
-    {
-        if ((typeFilter & (1 << i)) and
-            (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
-        {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("Failed to find suitable memory type.");
 }

@@ -5,6 +5,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #include "device_local_buffer.h"
 #include "host_visible_buffer.h"
 
@@ -18,6 +21,7 @@ MyRenderer::MyRenderer() :
     vertexBuffer(std::make_unique<DeviceLocalBuffer>(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)),
     indexBuffer(std::make_unique<DeviceLocalBuffer>(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer)),
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
+    textureImage(createTextureImage(environment)),
     descriptorSets(environment.createDescriptorSets(renderPipeline.descriptorSetLayout, MaxFramesInFlight)),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
@@ -198,37 +202,6 @@ void MyRenderer::recreateSwapchain()
     swapchainFramebuffers = environment.createSwapchainFramebuffers(renderPipeline.renderPass);
 }
 
-vk::raii::CommandBuffer MyRenderer::beginSingleTimeCommands() const
-{
-    vk::raii::CommandBuffer commandBuffer = std::move(environment.createGraphicsCommandBuffers(1)[0]);
-
-    constexpr vk::CommandBufferBeginInfo beginInfo{
-        .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
-    };
-
-    commandBuffer.begin(beginInfo);
-
-    return commandBuffer;
-}
-
-void MyRenderer::submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const
-{
-    commandBuffer.end();
-
-    const vk::SubmitInfo submitInfo{
-        .waitSemaphoreCount = 0,
-        .pWaitSemaphores = nullptr,
-        .pWaitDstStageMask = nullptr,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &*commandBuffer,
-        .signalSemaphoreCount = 0,
-        .pSignalSemaphores = nullptr
-    };
-
-    environment.graphicsQueue.submit(submitInfo, nullptr);
-    environment.graphicsQueue.waitIdle();
-}
-
 std::vector<std::unique_ptr<AbstractBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
 {
     std::vector<std::unique_ptr<AbstractBuffer>> uniformBuffers;
@@ -239,6 +212,25 @@ std::vector<std::unique_ptr<AbstractBuffer>> MyRenderer::createUniformBuffers(co
     }
 
     return uniformBuffers;
+}
+
+DeviceLocalImage MyRenderer::createTextureImage(const Environment& environment)
+{
+    int texWidth, texHeight, texChannels;
+    stbi_uc* pixels = stbi_load("../textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    const vk::DeviceSize imageSize = texWidth * texHeight * 4;
+
+    if (!pixels)
+    {
+        throw std::runtime_error("Failed to load texture image.");
+    }
+
+    DeviceLocalImage image{environment, {static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled};
+    image.uploadData(pixels, imageSize);
+
+    stbi_image_free(pixels);
+
+    return image;
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)

@@ -12,6 +12,7 @@ add_executable(my_renderer sources/main.cpp
         sources/device_local_buffer.cpp sources/device_local_buffer.h
         sources/host_visible_buffer.cpp sources/host_visible_buffer.h
         sources/vertex.cpp sources/vertex.h
+        sources/device_local_image.cpp sources/device_local_image.h
 )
 
 find_package(VulkanLoader REQUIRED)
@@ -22,3 +23,6 @@ target_link_libraries(my_renderer glfw)
 
 find_package(glm REQUIRED)
 target_link_libraries(my_renderer glm::glm)
+
+find_package(stb REQUIRED)
+target_link_libraries(my_renderer stb::stb)

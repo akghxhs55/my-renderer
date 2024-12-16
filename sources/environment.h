@@ -91,6 +91,9 @@ public:
     const vk::raii::SwapchainKHR& getSwapchain() const;
 
     void recreateSwapchain();
+    uint32_t findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const;
+    vk::raii::CommandBuffer beginSingleTimeCommands() const;
+    void submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
 
 private:
     static constexpr auto EngineName = "No Engine";
@@ -131,7 +134,6 @@ private:
     static vk::SurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
     static vk::PresentModeKHR chooseSwapchainPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
     vk::Extent2D chooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const;
-    uint32_t findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const;
 };
 
 

@@ -30,9 +30,7 @@ public:
 
 protected:
     vk::raii::Buffer createBuffer(const vk::DeviceSize size, const vk::BufferUsageFlags usage) const;
-    vk::raii::DeviceMemory allocateBufferMemory(const vk::raii::Buffer& buffer, const vk::MemoryPropertyFlags properties) const;
-
-    uint32_t findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const;
+    vk::raii::DeviceMemory allocateBufferMemory(const vk::MemoryPropertyFlags properties) const;
 };
 
 
