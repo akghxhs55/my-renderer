@@ -13,6 +13,7 @@ add_executable(my_renderer sources/main.cpp
         sources/host_visible_buffer.cpp sources/host_visible_buffer.h
         sources/vertex.cpp sources/vertex.h
         sources/device_local_image.cpp sources/device_local_image.h
+        sources/i_buffer.h
 )
 
 find_package(VulkanLoader REQUIRED)

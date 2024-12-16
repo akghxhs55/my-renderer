@@ -2,13 +2,11 @@
 #define ABSTRACT_BUFFER_H
 
 
-#define VULKAN_HPP_NO_CONSTRUCTORS
-#include <vulkan/vulkan_raii.hpp>
-
+#include "i_buffer.h"
 #include "environment.h"
 
 
-class AbstractBuffer
+class AbstractBuffer : public IBuffer
 {
 protected:
     std::reference_wrapper<const Environment> environment;
@@ -17,16 +15,14 @@ protected:
 
 public:
     AbstractBuffer(const Environment& environment, const vk::DeviceSize size, const vk::BufferUsageFlags usage);
-    virtual ~AbstractBuffer();
 
     AbstractBuffer(const AbstractBuffer&) = delete;
     AbstractBuffer& operator=(const AbstractBuffer&) = delete;
 
-    AbstractBuffer(AbstractBuffer&&) noexcept = default;
-    AbstractBuffer& operator=(AbstractBuffer&&) noexcept = default;
+    AbstractBuffer(AbstractBuffer&& other) noexcept;
+    AbstractBuffer& operator=(AbstractBuffer&& other) noexcept;
 
-    const vk::raii::Buffer& getBuffer() const;
-    virtual void uploadData(const void* sourceData, const vk::DeviceSize dataSize) const = 0;
+    const vk::raii::Buffer& getBuffer() const override;
 
 protected:
     vk::raii::Buffer createBuffer(const vk::DeviceSize size, const vk::BufferUsageFlags usage) const;

@@ -202,9 +202,9 @@ void MyRenderer::recreateSwapchain()
     swapchainFramebuffers = environment.createSwapchainFramebuffers(renderPipeline.renderPass);
 }
 
-std::vector<std::unique_ptr<AbstractBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
+std::vector<std::unique_ptr<IBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
 {
-    std::vector<std::unique_ptr<AbstractBuffer>> uniformBuffers;
+    std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
     uniformBuffers.reserve(count);
     for (uint32_t i = 0; i < count; ++i)
     {

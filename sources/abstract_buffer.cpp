@@ -9,7 +9,24 @@ AbstractBuffer::AbstractBuffer(const Environment& environment, const vk::DeviceS
 {
 }
 
-AbstractBuffer::~AbstractBuffer() = default;
+AbstractBuffer::AbstractBuffer(AbstractBuffer&& other) noexcept :
+    environment(other.environment),
+    size(other.size),
+    buffer(std::move(other.buffer))
+{
+}
+
+AbstractBuffer& AbstractBuffer::operator=(AbstractBuffer&& other) noexcept
+{
+    if (this != &other)
+    {
+        environment = other.environment;
+        size = other.size;
+        buffer = std::move(other.buffer);
+    }
+
+    return *this;
+}
 
 const vk::raii::Buffer& AbstractBuffer::getBuffer() const
 {

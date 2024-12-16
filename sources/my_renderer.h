@@ -7,7 +7,7 @@
 
 #include "window.h"
 #include "environment.h"
-#include "abstract_buffer.h"
+#include "i_buffer.h"
 #include "device_local_image.h"
 #include "render_pipeline.h"
 #include "vertex.h"
@@ -56,9 +56,9 @@ private:
     Window window;
     Environment environment;
     RenderPipeline renderPipeline;
-    std::unique_ptr<AbstractBuffer> vertexBuffer;
-    std::unique_ptr<AbstractBuffer> indexBuffer;
-    std::vector<std::unique_ptr<AbstractBuffer>> uniformBuffers;
+    std::unique_ptr<IBuffer> vertexBuffer;
+    std::unique_ptr<IBuffer> indexBuffer;
+    std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
     DeviceLocalImage textureImage;
     std::vector<vk::raii::DescriptorSet> descriptorSets;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
@@ -72,7 +72,7 @@ private:
     void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
     void recreateSwapchain();
 
-    static std::vector<std::unique_ptr<AbstractBuffer>> createUniformBuffers(const Environment& environment, const uint32_t count);
+    static std::vector<std::unique_ptr<IBuffer>> createUniformBuffers(const Environment& environment, const uint32_t count);
     static DeviceLocalImage createTextureImage(const Environment& environment);
     static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };
