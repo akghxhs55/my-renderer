@@ -60,6 +60,7 @@ private:
     std::unique_ptr<IBuffer> indexBuffer;
     std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
     DeviceLocalImage textureImage;
+    vk::raii::Sampler textureSampler;
     std::vector<vk::raii::DescriptorSet> descriptorSets;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
@@ -74,6 +75,7 @@ private:
 
     static std::vector<std::unique_ptr<IBuffer>> createUniformBuffers(const Environment& environment, const uint32_t count);
     static DeviceLocalImage createTextureImage(const Environment& environment);
+    static vk::raii::Sampler createTextureSampler(const Environment& environment);
     static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };
 

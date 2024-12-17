@@ -270,7 +270,9 @@ vk::raii::Device Environment::createDevice() const
         }
     }
 
-    constexpr vk::PhysicalDeviceFeatures enabledFeatures{};
+    constexpr vk::PhysicalDeviceFeatures enabledFeatures{
+        .samplerAnisotropy = vk::True
+    };
 
     const vk::DeviceCreateInfo createInfo{
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
@@ -416,10 +418,12 @@ bool Environment::isPhysicalDeviceSuitable(const vk::raii::PhysicalDevice& physi
     const QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
     const SwapchainDetails swapchainDetails = querySwapchainSupport(physicalDevice);
     const bool extensionsSupported = checkDeviceExtensionSupport(physicalDevice);
+    const vk::PhysicalDeviceFeatures supportedFeatures = physicalDevice.getFeatures();
 
     return indices.isComplete() and
             swapchainDetails.isComplete() and
-            extensionsSupported;
+            extensionsSupported and
+            supportedFeatures.samplerAnisotropy;
 }
 
 bool Environment::checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice)

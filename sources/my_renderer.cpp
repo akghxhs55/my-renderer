@@ -22,6 +22,7 @@ MyRenderer::MyRenderer() :
     indexBuffer(std::make_unique<DeviceLocalBuffer>(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer)),
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
     textureImage(createTextureImage(environment)),
+    textureSampler(createTextureSampler(environment)),
     descriptorSets(environment.createDescriptorSets(renderPipeline.descriptorSetLayout, MaxFramesInFlight)),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
@@ -227,10 +228,34 @@ DeviceLocalImage MyRenderer::createTextureImage(const Environment& environment)
 
     DeviceLocalImage image{environment, {static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled};
     image.uploadData(pixels, imageSize);
+    image.transitionImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
     stbi_image_free(pixels);
 
     return image;
+}
+
+vk::raii::Sampler MyRenderer::createTextureSampler(const Environment& environment)
+{
+    const vk::SamplerCreateInfo createInfo{
+        .magFilter = vk::Filter::eLinear,
+        .minFilter = vk::Filter::eLinear,
+        .addressModeU = vk::SamplerAddressMode::eRepeat,
+        .addressModeV = vk::SamplerAddressMode::eRepeat,
+        .addressModeW = vk::SamplerAddressMode::eRepeat,
+        .anisotropyEnable = vk::True,
+        .maxAnisotropy = environment.physicalDevice.getProperties().limits.maxSamplerAnisotropy,
+        .borderColor = vk::BorderColor::eIntOpaqueBlack,
+        .unnormalizedCoordinates = vk::False,
+        .compareEnable = vk::False,
+        .compareOp = vk::CompareOp::eAlways,
+        .mipmapMode = vk::SamplerMipmapMode::eLinear,
+        .mipLodBias = 0.0f,
+        .minLod = 0.0f,
+        .maxLod = 0.0f
+    };
+
+    return environment.device.createSampler(createInfo);
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)

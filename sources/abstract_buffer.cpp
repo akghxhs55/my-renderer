@@ -56,4 +56,9 @@ vk::raii::DeviceMemory AbstractBuffer::allocateBufferMemory(const vk::MemoryProp
     };
 
     return environment.get().device.allocateMemory(allocateInfo);
+
+    // vk::raii::DeviceMemory bufferMemory = environment.get().device.allocateMemory(allocateInfo);
+    // buffer.bindMemory(*bufferMemory, 0);
+    //
+    // return bufferMemory;
 }

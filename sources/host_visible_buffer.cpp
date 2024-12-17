@@ -4,10 +4,9 @@ HostVisibleBuffer::HostVisibleBuffer(const Environment& environment, const vk::D
     const vk::BufferUsageFlags usage) :
     AbstractBuffer(environment, size, usage),
     bufferMemory(allocateBufferMemory(vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)),
-    mappedMemory(nullptr)
+    mappedMemory(bufferMemory.mapMemory(0, size))
 {
     buffer.bindMemory(*bufferMemory, 0);
-    mappedMemory = bufferMemory.mapMemory(0, size);
 }
 
 HostVisibleBuffer::~HostVisibleBuffer()
