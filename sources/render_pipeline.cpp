@@ -25,10 +25,18 @@ vk::raii::DescriptorSetLayout RenderPipeline::createDescriptorSetLayout(const En
         .stageFlags = vk::ShaderStageFlagBits::eVertex,
         .pImmutableSamplers = nullptr
     };
+    constexpr vk::DescriptorSetLayoutBinding samplerLayoutBinding{
+        .binding = 1,
+        .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+        .descriptorCount = 1,
+        .stageFlags = vk::ShaderStageFlagBits::eFragment,
+        .pImmutableSamplers = nullptr
+    };
+    constexpr std::array<vk::DescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
 
     const vk::DescriptorSetLayoutCreateInfo createInfo{
-        .bindingCount = 1,
-        .pBindings = &uboLayoutBinding
+        .bindingCount = static_cast<uint32_t>(bindings.size()),
+        .pBindings = bindings.data()
     };
 
     return environment.device.createDescriptorSetLayout(createInfo);
@@ -110,7 +118,7 @@ vk::raii::Pipeline RenderPipeline::createGraphicsPipeline(const Environment& env
     const std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStageCreateInfos = { vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo };
 
     const vk::VertexInputBindingDescription vertexInputBindingDescription = Vertex::getBindingDescription();
-    const std::array<vk::VertexInputAttributeDescription, 2> vertexInputAttributeDescriptions = Vertex::getAttributeDescriptions();
+    const std::array<vk::VertexInputAttributeDescription, 3> vertexInputAttributeDescriptions = Vertex::getAttributeDescriptions();
     const vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo {
         .vertexBindingDescriptionCount = 1,
         .pVertexBindingDescriptions = &vertexInputBindingDescription,

@@ -12,11 +12,12 @@ class Vertex {
 public:
     glm::vec2 pos;
     glm::vec3 color;
+    glm::vec2 texCoord;
 
-    static constexpr size_t Size = sizeof(pos) + sizeof(color);
+    static constexpr size_t Size = sizeof(pos) + sizeof(color) + sizeof(texCoord);
 
     static vk::VertexInputBindingDescription getBindingDescription();
-    static std::array<vk::VertexInputAttributeDescription, 2> getAttributeDescriptions();
+    static std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions();
 };
 
 

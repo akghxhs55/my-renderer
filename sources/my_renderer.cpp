@@ -23,7 +23,8 @@ MyRenderer::MyRenderer() :
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
     textureImage(createTextureImage(environment)),
     textureSampler(createTextureSampler(environment)),
-    descriptorSets(environment.createDescriptorSets(renderPipeline.descriptorSetLayout, MaxFramesInFlight)),
+    descriptorPool(createDescriptorPool(environment, MaxFramesInFlight)),
+    descriptorSets(createDescriptorSets(environment, renderPipeline.descriptorSetLayout, descriptorPool, MaxFramesInFlight)),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
@@ -40,18 +41,36 @@ MyRenderer::MyRenderer() :
             .range = sizeof(UniformBufferObject)
         };
 
-        const vk::WriteDescriptorSet descriptorWrite{
-            .dstSet = *descriptorSets[i],
-            .dstBinding = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = vk::DescriptorType::eUniformBuffer,
-            .pBufferInfo = &bufferInfo,
-            .pImageInfo = nullptr,
-            .pTexelBufferView = nullptr
+        const vk::DescriptorImageInfo imageInfo{
+            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .imageView = *textureImage.imageView,
+            .sampler = *textureSampler
         };
 
-        environment.device.updateDescriptorSets({ descriptorWrite }, nullptr);
+        const std::array<vk::WriteDescriptorSet, 2> descriptorWrites {
+            vk::WriteDescriptorSet{
+                .dstSet = *descriptorSets[i],
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eUniformBuffer,
+                .pBufferInfo = &bufferInfo,
+                .pImageInfo = nullptr,
+                .pTexelBufferView = nullptr
+            },
+            vk::WriteDescriptorSet{
+                .dstSet = *descriptorSets[i],
+                .dstBinding = 1,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+                .pBufferInfo = nullptr,
+                .pImageInfo = &imageInfo,
+                .pTexelBufferView = nullptr
+            }
+        };
+
+        environment.device.updateDescriptorSets(descriptorWrites, nullptr);
     }
 }
 
@@ -256,6 +275,50 @@ vk::raii::Sampler MyRenderer::createTextureSampler(const Environment& environmen
     };
 
     return environment.device.createSampler(createInfo);
+}
+
+vk::raii::DescriptorPool MyRenderer::createDescriptorPool(const Environment& environment, const uint32_t count)
+{
+    const std::array<vk::DescriptorPoolSize, 2> poolSizes{
+        vk::DescriptorPoolSize{
+            .type = vk::DescriptorType::eUniformBuffer,
+            .descriptorCount = count
+        },
+        vk::DescriptorPoolSize{
+            .type = vk::DescriptorType::eCombinedImageSampler,
+            .descriptorCount = count
+        }
+    };
+
+    const vk::DescriptorPoolCreateInfo createInfo{
+        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets = count,
+        .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
+        .pPoolSizes = poolSizes.data()
+    };
+
+    return environment.device.createDescriptorPool(createInfo);
+}
+
+std::vector<vk::raii::DescriptorSet> MyRenderer::createDescriptorSets(const Environment& environment,
+    const vk::raii::DescriptorSetLayout& descriptorSetLayout, const vk::raii::DescriptorPool& descriptorPool,
+    const uint32_t count)
+{
+    std::vector<vk::raii::DescriptorSet> descriptorSets;
+    descriptorSets.reserve(count);
+
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        const vk::DescriptorSetAllocateInfo allocateInfo{
+            .descriptorPool = *descriptorPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &*descriptorSetLayout
+        };
+
+        descriptorSets.push_back(std::move(environment.device.allocateDescriptorSets(allocateInfo)[0]));
+    }
+
+    return descriptorSets;
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)

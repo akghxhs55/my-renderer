@@ -44,10 +44,10 @@ private:
     static constexpr uint32_t MaxFramesInFlight = 2;
 
     static constexpr std::array<Vertex, 4> vertices = {
-        Vertex{ { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
-        Vertex{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
-        Vertex{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
-        Vertex{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } }
+        Vertex{ { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        Vertex{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+        Vertex{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+        Vertex{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } }
     };
     static constexpr std::array<uint16_t, 6> indices = {
         0, 1, 2, 2, 3, 0
@@ -61,6 +61,7 @@ private:
     std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
     DeviceLocalImage textureImage;
     vk::raii::Sampler textureSampler;
+    vk::raii::DescriptorPool descriptorPool;
     std::vector<vk::raii::DescriptorSet> descriptorSets;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
@@ -76,6 +77,8 @@ private:
     static std::vector<std::unique_ptr<IBuffer>> createUniformBuffers(const Environment& environment, const uint32_t count);
     static DeviceLocalImage createTextureImage(const Environment& environment);
     static vk::raii::Sampler createTextureSampler(const Environment& environment);
+    static vk::raii::DescriptorPool createDescriptorPool(const Environment& environment, const uint32_t count);
+    static std::vector<vk::raii::DescriptorSet> createDescriptorSets(const Environment& environment, const vk::raii::DescriptorSetLayout& descriptorSetLayout, const vk::raii::DescriptorPool& descriptorPool, const uint32_t count);
     static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };
 
