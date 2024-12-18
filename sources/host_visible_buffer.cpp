@@ -3,10 +3,9 @@
 HostVisibleBuffer::HostVisibleBuffer(const Environment& environment, const vk::DeviceSize size,
     const vk::BufferUsageFlags usage) :
     AbstractBuffer(environment, size, usage),
-    bufferMemory(allocateBufferMemory(vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)),
+    bufferMemory(bindBufferMemory(buffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)),
     mappedMemory(bufferMemory.mapMemory(0, size))
 {
-    buffer.bindMemory(*bufferMemory, 0);
 }
 
 HostVisibleBuffer::~HostVisibleBuffer()

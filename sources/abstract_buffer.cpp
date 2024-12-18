@@ -2,7 +2,7 @@
 
 
 AbstractBuffer::AbstractBuffer(const Environment& environment, const vk::DeviceSize size,
-    const vk::BufferUsageFlags usage) :
+                               const vk::BufferUsageFlags usage) :
     environment(environment),
     size(size),
     buffer(createBuffer(size, usage))
@@ -46,7 +46,7 @@ vk::raii::Buffer AbstractBuffer::createBuffer(const vk::DeviceSize size, const v
     return environment.get().device.createBuffer(createInfo);
 }
 
-vk::raii::DeviceMemory AbstractBuffer::allocateBufferMemory(const vk::MemoryPropertyFlags properties) const
+vk::raii::DeviceMemory AbstractBuffer::bindBufferMemory(const vk::raii::Buffer& buffer, const vk::MemoryPropertyFlags properties) const
 {
     const vk::MemoryRequirements memoryRequirements = buffer.getMemoryRequirements();
 
@@ -55,10 +55,8 @@ vk::raii::DeviceMemory AbstractBuffer::allocateBufferMemory(const vk::MemoryProp
         .memoryTypeIndex = environment.get().findMemoryType(memoryRequirements.memoryTypeBits, properties)
     };
 
-    return environment.get().device.allocateMemory(allocateInfo);
+    vk::raii::DeviceMemory bufferMemory = environment.get().device.allocateMemory(allocateInfo);
+    buffer.bindMemory(*bufferMemory, 0);
 
-    // vk::raii::DeviceMemory bufferMemory = environment.get().device.allocateMemory(allocateInfo);
-    // buffer.bindMemory(*bufferMemory, 0);
-    //
-    // return bufferMemory;
+    return bufferMemory;
 }

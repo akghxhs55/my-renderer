@@ -3,9 +3,8 @@
 
 DeviceLocalBuffer::DeviceLocalBuffer(const Environment& environment, const vk::DeviceSize size, const vk::BufferUsageFlags usage) :
     AbstractBuffer(environment, size, usage),
-    bufferMemory(allocateBufferMemory(vk::MemoryPropertyFlagBits::eDeviceLocal))
+    bufferMemory(bindBufferMemory(buffer, vk::MemoryPropertyFlagBits::eDeviceLocal))
 {
-    buffer.bindMemory(*bufferMemory, 0);
 }
 
 DeviceLocalBuffer::~DeviceLocalBuffer() = default;
@@ -35,8 +34,7 @@ void DeviceLocalBuffer::uploadData(const void* sourceData, const vk::DeviceSize 
     }
 
     const vk::raii::Buffer stagingBuffer = createBuffer(dataSize, vk::BufferUsageFlagBits::eTransferSrc);
-    const vk::raii::DeviceMemory stagingBufferMemory = allocateBufferMemory(vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-    stagingBuffer.bindMemory(*stagingBufferMemory, 0);
+    const vk::raii::DeviceMemory stagingBufferMemory = bindBufferMemory(stagingBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
     void *data = stagingBufferMemory.mapMemory(0, dataSize);
     std::memcpy(data, sourceData, dataSize);
