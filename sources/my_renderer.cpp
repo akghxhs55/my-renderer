@@ -23,8 +23,7 @@ MyRenderer::MyRenderer() :
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
     textureImage(createTextureImage(environment)),
     textureSampler(createTextureSampler(environment)),
-    descriptorPool(createDescriptorPool(environment, MaxFramesInFlight)),
-    descriptorSets(createDescriptorSets(environment, renderPipeline.descriptorSetLayout, descriptorPool, MaxFramesInFlight)),
+    descriptorSets(environment.createDescriptorSets(MaxFramesInFlight, renderPipeline.descriptorSetLayout)),
     swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
@@ -275,50 +274,6 @@ vk::raii::Sampler MyRenderer::createTextureSampler(const Environment& environmen
     };
 
     return environment.device.createSampler(createInfo);
-}
-
-vk::raii::DescriptorPool MyRenderer::createDescriptorPool(const Environment& environment, const uint32_t count)
-{
-    const std::array<vk::DescriptorPoolSize, 2> poolSizes{
-        vk::DescriptorPoolSize{
-            .type = vk::DescriptorType::eUniformBuffer,
-            .descriptorCount = count
-        },
-        vk::DescriptorPoolSize{
-            .type = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = count
-        }
-    };
-
-    const vk::DescriptorPoolCreateInfo createInfo{
-        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-        .maxSets = count,
-        .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
-        .pPoolSizes = poolSizes.data()
-    };
-
-    return environment.device.createDescriptorPool(createInfo);
-}
-
-std::vector<vk::raii::DescriptorSet> MyRenderer::createDescriptorSets(const Environment& environment,
-    const vk::raii::DescriptorSetLayout& descriptorSetLayout, const vk::raii::DescriptorPool& descriptorPool,
-    const uint32_t count)
-{
-    std::vector<vk::raii::DescriptorSet> descriptorSets;
-    descriptorSets.reserve(count);
-
-    for (uint32_t i = 0; i < count; ++i)
-    {
-        const vk::DescriptorSetAllocateInfo allocateInfo{
-            .descriptorPool = *descriptorPool,
-            .descriptorSetCount = 1,
-            .pSetLayouts = &*descriptorSetLayout
-        };
-
-        descriptorSets.push_back(std::move(environment.device.allocateDescriptorSets(allocateInfo)[0]));
-    }
-
-    return descriptorSets;
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)

@@ -18,6 +18,7 @@ Environment::Environment(const Window& window, const char* applicationName, cons
     graphicsQueue(device.getQueue(queueFamilyIndices.graphicsFamily.value(), 0)),
     presentQueue(device.getQueue(queueFamilyIndices.presentFamily.value(), 0)),
     graphicsCommandPool(createCommandPool(queueFamilyIndices.graphicsFamily.value())),
+    descriptorPool(createDescriptorPool(maxFramesInFlight)),
     swapchainSurfaceFormat(chooseSwapchainSurfaceFormat(querySwapchainSupport(physicalDevice).formats)),
     swapchainExtent(chooseSwapchainExtent(querySwapchainSupport(physicalDevice).capabilities)),
     swapchain(createSwapchain()),
@@ -58,6 +59,26 @@ std::vector<vk::raii::CommandBuffer> Environment::createGraphicsCommandBuffers(c
     };
 
     return device.allocateCommandBuffers(allocateInfo);
+}
+
+std::vector<vk::raii::DescriptorSet> Environment::createDescriptorSets(const uint32_t count,
+    const vk::raii::DescriptorSetLayout& descriptorSetLayout) const
+{
+    std::vector<vk::raii::DescriptorSet> descriptorSets;
+    descriptorSets.reserve(count);
+
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        const vk::DescriptorSetAllocateInfo allocateInfo{
+            .descriptorPool = *descriptorPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &*descriptorSetLayout
+        };
+
+        descriptorSets.push_back(std::move(device.allocateDescriptorSets(allocateInfo)[0]));
+    }
+
+    return descriptorSets;
 }
 
 vk::raii::Semaphore Environment::createSemaphore(const vk::SemaphoreCreateFlags flags) const
@@ -281,6 +302,29 @@ vk::raii::CommandPool Environment::createCommandPool(const uint32_t queueFamilyI
     };
 
     return device.createCommandPool(createInfo);
+}
+
+vk::raii::DescriptorPool Environment::createDescriptorPool(const uint32_t count) const
+{
+    const std::array<vk::DescriptorPoolSize, 2> poolSizes{
+        vk::DescriptorPoolSize{
+            .type = vk::DescriptorType::eUniformBuffer,
+            .descriptorCount = count
+        },
+        vk::DescriptorPoolSize{
+            .type = vk::DescriptorType::eCombinedImageSampler,
+            .descriptorCount = count
+        }
+    };
+
+    const vk::DescriptorPoolCreateInfo createInfo{
+        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets = count,
+        .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
+        .pPoolSizes = poolSizes.data()
+    };
+
+    return device.createDescriptorPool(createInfo);
 }
 
 vk::raii::SwapchainKHR Environment::createSwapchain() const
