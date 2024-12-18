@@ -263,7 +263,7 @@ vk::raii::Sampler MyRenderer::createTextureSampler(const Environment& environmen
         .addressModeV = vk::SamplerAddressMode::eRepeat,
         .addressModeW = vk::SamplerAddressMode::eRepeat,
         .anisotropyEnable = vk::True,
-        .maxAnisotropy = environment.physicalDevice.getProperties().limits.maxSamplerAnisotropy,
+        .maxAnisotropy = environment.physicalDeviceProperties.limits.maxSamplerAnisotropy,
         .borderColor = vk::BorderColor::eIntOpaqueBlack,
         .unnormalizedCoordinates = vk::False,
         .compareEnable = vk::False,

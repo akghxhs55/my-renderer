@@ -56,11 +56,10 @@ private:
     const vk::raii::Instance instance;
     const std::optional<vk::raii::DebugUtilsMessengerEXT> debugMessenger;
     const vk::raii::SurfaceKHR surface;
-public:
     const vk::raii::PhysicalDevice physicalDevice;
-private:
     const QueueFamilyIndices queueFamilyIndices;
 public:
+    const vk::PhysicalDeviceProperties physicalDeviceProperties;
     const vk::raii::Device device;
     const vk::raii::Queue graphicsQueue;
     const vk::raii::Queue presentQueue;

@@ -13,6 +13,7 @@ Environment::Environment(const Window& window, const char* applicationName, cons
     surface(window.createSurface(instance)),
     physicalDevice(selectPhysicalDevice()),
     queueFamilyIndices(findQueueFamilies(physicalDevice)),
+    physicalDeviceProperties(physicalDevice.getProperties()),
     device(createDevice()),
     graphicsQueue(device.getQueue(queueFamilyIndices.graphicsFamily.value(), 0)),
     presentQueue(device.getQueue(queueFamilyIndices.presentFamily.value(), 0)),
