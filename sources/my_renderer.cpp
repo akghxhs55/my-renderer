@@ -2,6 +2,7 @@
 
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -23,8 +24,9 @@ MyRenderer::MyRenderer() :
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
     textureImage(createTextureImage(environment)),
     textureSampler(createTextureSampler(environment)),
+    depthImage(environment, environment.getSwapchainExtent(), environment.depthFormat, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth),
     descriptorSets(environment.createDescriptorSets(MaxFramesInFlight, renderPipeline.descriptorSetLayout)),
-    swapchainFramebuffers(environment.createSwapchainFramebuffers(renderPipeline.renderPass)),
+    swapchainFramebuffers(createSwapchainFramebuffers(environment, renderPipeline.renderPass, depthImage.imageView)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
     currentFrame(0)
@@ -177,7 +179,11 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
 
     commandBuffer.begin(beginInfo);
 
-    constexpr vk::ClearValue clearColor{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } };
+    constexpr std::array<vk::ClearValue, 2> clearValues{
+        vk::ClearValue{ .color = vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } } },
+        vk::ClearValue{ .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 } }
+    };
+
     const vk::RenderPassBeginInfo renderPassBeginInfo{
         .renderPass = *renderPipeline.renderPass,
         .framebuffer = *swapchainFramebuffers[imageIndex],
@@ -185,8 +191,8 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
             .offset = { 0, 0 },
             .extent = environment.getSwapchainExtent()
         },
-        .clearValueCount = 1,
-        .pClearValues = &clearColor
+        .clearValueCount = static_cast<uint32_t>(clearValues.size()),
+        .pClearValues = clearValues.data()
     };
 
     commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
@@ -218,7 +224,8 @@ void MyRenderer::recreateSwapchain()
 
     swapchainFramebuffers.clear();
     environment.recreateSwapchain();
-    swapchainFramebuffers = environment.createSwapchainFramebuffers(renderPipeline.renderPass);
+    depthImage = DeviceLocalImage(environment, environment.getSwapchainExtent(), environment.depthFormat, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
+    swapchainFramebuffers = createSwapchainFramebuffers(environment, renderPipeline.renderPass, depthImage.imageView);
 }
 
 std::vector<std::unique_ptr<IBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
@@ -244,7 +251,7 @@ DeviceLocalImage MyRenderer::createTextureImage(const Environment& environment)
         throw std::runtime_error("Failed to load texture image.");
     }
 
-    DeviceLocalImage image{environment, {static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled};
+    DeviceLocalImage image{environment, {static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, vk::ImageAspectFlagBits::eColor};
     image.uploadData(pixels, imageSize);
     image.transitionImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
@@ -274,6 +281,33 @@ vk::raii::Sampler MyRenderer::createTextureSampler(const Environment& environmen
     };
 
     return environment.device.createSampler(createInfo);
+}
+
+std::vector<vk::raii::Framebuffer> MyRenderer::createSwapchainFramebuffers(const Environment& environment,
+    const vk::raii::RenderPass& renderPass, const vk::raii::ImageView& depthImageView)
+{
+    const auto& swapchainImageViews = environment.getSwapchainImageViews();
+    const auto& swapchainExtent = environment.getSwapchainExtent();
+
+    std::vector<vk::raii::Framebuffer> framebuffers;
+    framebuffers.reserve(swapchainImageViews.size());
+    for (const vk::raii::ImageView& swapchainImageView : swapchainImageViews)
+    {
+        const std::array<vk::ImageView, 2> attachments = { *swapchainImageView, *depthImageView };
+
+        const vk::FramebufferCreateInfo createInfo{
+            .renderPass = *renderPass,
+            .attachmentCount = static_cast<uint32_t>(attachments.size()),
+            .pAttachments = attachments.data(),
+            .width = swapchainExtent.width,
+            .height = swapchainExtent.height,
+            .layers = 1
+        };
+
+        framebuffers.emplace_back(environment.device, createInfo);
+    }
+
+    return framebuffers;
 }
 
 std::vector<MyRenderer::SyncObjects> MyRenderer::createSyncObjects(const Environment& environment, const uint32_t count)

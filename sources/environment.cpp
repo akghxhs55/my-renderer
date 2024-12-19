@@ -23,32 +23,12 @@ Environment::Environment(const Window& window, const char* applicationName, cons
     swapchainExtent(chooseSwapchainExtent(querySwapchainSupport(physicalDevice).capabilities)),
     swapchain(createSwapchain()),
     swapchainImages(swapchain.getImages()),
-    swapchainImageViews(createSwapchainImageViews())
+    swapchainImageViews(createSwapchainImageViews()),
+    depthFormat(findSupportedFormat({ vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint }, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment))
 {
 }
 
 Environment::~Environment() = default;
-
-std::vector<vk::raii::Framebuffer> Environment::createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const
-{
-    std::vector<vk::raii::Framebuffer> framebuffers;
-    framebuffers.reserve(swapchainImageViews.size());
-    for (const vk::raii::ImageView& imageView : swapchainImageViews)
-    {
-        const vk::FramebufferCreateInfo createInfo{
-            .renderPass = *renderPass,
-            .attachmentCount = 1,
-            .pAttachments = &*imageView,
-            .width = swapchainExtent.width,
-            .height = swapchainExtent.height,
-            .layers = 1
-        };
-
-        framebuffers.emplace_back(device, createInfo);
-    }
-
-    return framebuffers;
-}
 
 std::vector<vk::raii::CommandBuffer> Environment::createGraphicsCommandBuffers(const uint32_t count, const vk::CommandBufferLevel level) const
 {
@@ -129,17 +109,9 @@ const vk::raii::SwapchainKHR& Environment::getSwapchain() const
     return swapchain;
 }
 
-void Environment::recreateSwapchain()
+const std::vector<vk::raii::ImageView>& Environment::getSwapchainImageViews() const
 {
-    swapchainImageViews.clear();
-    swapchainImages.clear();
-    swapchain.clear();
-
-    swapchainExtent = chooseSwapchainExtent(querySwapchainSupport(physicalDevice).capabilities);
-
-    swapchain = createSwapchain();
-    swapchainImages = swapchain.getImages();
-    swapchainImageViews = createSwapchainImageViews();
+    return swapchainImageViews;
 }
 
 uint32_t Environment::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const
@@ -157,7 +129,6 @@ uint32_t Environment::findMemoryType(const uint32_t typeFilter, const vk::Memory
 
     throw std::runtime_error("Failed to find suitable memory type.");
 }
-
 
 vk::raii::CommandBuffer Environment::beginSingleTimeCommands() const
 {
@@ -188,6 +159,20 @@ void Environment::submitSingleTimeCommands(const vk::raii::CommandBuffer& comman
 
     graphicsQueue.submit(submitInfo, nullptr);
     graphicsQueue.waitIdle();
+}
+
+
+void Environment::recreateSwapchain()
+{
+    swapchainImageViews.clear();
+    swapchainImages.clear();
+    swapchain.clear();
+
+    swapchainExtent = chooseSwapchainExtent(querySwapchainSupport(physicalDevice).capabilities);
+
+    swapchain = createSwapchain();
+    swapchainImages = swapchain.getImages();
+    swapchainImageViews = createSwapchainImageViews();
 }
 
 vk::raii::Instance Environment::createInstance(const char* applicationName, const uint32_t applicationVersion) const
@@ -548,4 +533,26 @@ vk::Bool32 Environment::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT mes
 {
     std::cerr << "[Validation layer] " << pCallbackData->pMessage << std::endl;
     return vk::False;
+}
+
+vk::Format Environment::findSupportedFormat(const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling,
+    const vk::FormatFeatureFlags features) const
+{
+    for (const vk::Format format : candidates)
+    {
+        const vk::FormatProperties properties = physicalDevice.getFormatProperties(format);
+
+        if (tiling == vk::ImageTiling::eLinear and
+            (properties.linearTilingFeatures & features) == features)
+        {
+            return format;
+        }
+        else if (tiling == vk::ImageTiling::eOptimal and
+            (properties.optimalTilingFeatures & features) == features)
+        {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("Failed to find supported format.");
 }

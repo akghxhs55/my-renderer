@@ -66,30 +66,52 @@ vk::raii::RenderPass RenderPipeline::createRenderPass(const Environment& environ
         .initialLayout = vk::ImageLayout::eUndefined,
         .finalLayout = vk::ImageLayout::ePresentSrcKHR
     };
+    const vk::AttachmentDescription depthAttachmentDescription{
+        .format = environment.depthFormat,
+        .samples = vk::SampleCountFlagBits::e1,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eDontCare,
+        .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+        .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+        .initialLayout = vk::ImageLayout::eUndefined,
+        .finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal
+    };
+    const std::array<vk::AttachmentDescription, 2> attachments = { colorAttachmentDescription, depthAttachmentDescription };
 
     constexpr vk::AttachmentReference colorAttachmentReference{
         .attachment = 0,
         .layout = vk::ImageLayout::eColorAttachmentOptimal
     };
 
+    constexpr vk::AttachmentReference depthAttachmentReference{
+        .attachment = 1,
+        .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal
+    };
+
     const vk::SubpassDescription subpassDescription{
         .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+        .inputAttachmentCount = 0,
+        .pInputAttachments = nullptr,
         .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentReference
+        .pColorAttachments = &colorAttachmentReference,
+        .pResolveAttachments = nullptr,
+        .pDepthStencilAttachment = &depthAttachmentReference,
+        .preserveAttachmentCount = 0,
+        .pPreserveAttachments = nullptr
     };
 
     constexpr vk::SubpassDependency subpassDependency{
         .srcSubpass = vk::SubpassExternal,
         .dstSubpass = 0,
-        .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-        .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+        .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests,
+        .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests,
         .srcAccessMask = {},
-        .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite
+        .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite
     };
 
     const vk::RenderPassCreateInfo createInfo{
-        .attachmentCount = 1,
-        .pAttachments = &colorAttachmentDescription,
+        .attachmentCount = static_cast<uint32_t>(attachments.size()),
+        .pAttachments = attachments.data(),
         .subpassCount = 1,
         .pSubpasses = &subpassDescription,
         .dependencyCount = 1,
@@ -160,6 +182,18 @@ vk::raii::Pipeline RenderPipeline::createGraphicsPipeline(const Environment& env
         .alphaToOneEnable = vk::False
     };
 
+    constexpr vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo{
+        .depthTestEnable = vk::True,
+        .depthWriteEnable = vk::True,
+        .depthCompareOp = vk::CompareOp::eLess,
+        .depthBoundsTestEnable = vk::False,
+        .stencilTestEnable = vk::False,
+        .front = {},
+        .back = {},
+        .minDepthBounds = 0.0f,
+        .maxDepthBounds = 1.0f
+    };
+
     constexpr vk::PipelineColorBlendAttachmentState colorBlendAttachmentState{
         .blendEnable = vk::False,
         .srcColorBlendFactor = vk::BlendFactor::eOne,
@@ -194,7 +228,7 @@ vk::raii::Pipeline RenderPipeline::createGraphicsPipeline(const Environment& env
         .pViewportState = &viewportStateCreateInfo,
         .pRasterizationState = &rasterizationStateCreateInfo,
         .pMultisampleState = &multisampleStateCreateInfo,
-        .pDepthStencilState = nullptr,
+        .pDepthStencilState = &depthStencilStateCreateInfo,
         .pColorBlendState = &colorBlendStateCreateInfo,
         .pDynamicState = &dynamicStateCreateInfo,
         .layout = *pipelineLayout,

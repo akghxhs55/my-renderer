@@ -73,12 +73,13 @@ private:
     vk::raii::SwapchainKHR swapchain;
     std::vector<vk::Image> swapchainImages;
     std::vector<vk::raii::ImageView> swapchainImageViews;
+public:
+    const vk::Format depthFormat;
 
 public:
     Environment(const Window& window, const char* applicationName, const uint32_t applicationVersion, const uint32_t maxFramesInFlight);
     ~Environment();
 
-    std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const vk::raii::RenderPass& renderPass) const;
     std::vector<vk::raii::CommandBuffer> createGraphicsCommandBuffers(const uint32_t count, const vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary) const;
     std::vector<vk::raii::DescriptorSet> createDescriptorSets(const uint32_t count, const vk::raii::DescriptorSetLayout& descriptorSetLayout) const;
     vk::raii::Semaphore createSemaphore(const vk::SemaphoreCreateFlags flags = {}) const;
@@ -88,11 +89,12 @@ public:
     vk::Rect2D getScissor() const;
     vk::Extent2D getSwapchainExtent() const;
     const vk::raii::SwapchainKHR& getSwapchain() const;
+    const std::vector<vk::raii::ImageView>& getSwapchainImageViews() const;
 
-    void recreateSwapchain();
     uint32_t findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const;
     vk::raii::CommandBuffer beginSingleTimeCommands() const;
     void submitSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
+    void recreateSwapchain();
 
 private:
     static constexpr auto EngineName = "No Engine";
@@ -133,6 +135,7 @@ private:
     static vk::SurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
     static vk::PresentModeKHR chooseSwapchainPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
     vk::Extent2D chooseSwapchainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const;
+    vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags features) const;
 };
 
 

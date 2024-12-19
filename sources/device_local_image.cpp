@@ -5,9 +5,11 @@
 
 
 DeviceLocalImage::DeviceLocalImage(const Environment& environment, const vk::Extent2D extent, const vk::Format format,
-    const vk::ImageUsageFlags usage) :
+    const vk::ImageUsageFlags usage, const vk::ImageAspectFlags aspectFlags) :
     environment(environment),
     extent(extent),
+    format(format),
+    aspectFlags(aspectFlags),
     size(extent.width * extent.height * 4),
     currentLayout(vk::ImageLayout::eUndefined),
     image(createImage(extent, format, usage)),
@@ -23,6 +25,8 @@ DeviceLocalImage::DeviceLocalImage(DeviceLocalImage&& other) noexcept :
     environment(other.environment),
     extent(other.extent),
     size(other.size),
+    format(other.format),
+    aspectFlags(other.aspectFlags),
     currentLayout(other.currentLayout),
     image(std::move(other.image)),
     imageMemory(std::move(other.imageMemory)),
@@ -36,6 +40,8 @@ DeviceLocalImage& DeviceLocalImage::operator=(DeviceLocalImage&& other) noexcept
     {
         environment = other.environment;
         extent = other.extent;
+        format = other.format;
+        aspectFlags = other.aspectFlags;
         size = other.size;
         currentLayout = other.currentLayout;
         image = std::move(other.image);
@@ -69,7 +75,7 @@ void DeviceLocalImage::uploadData(const void* sourceData, const vk::DeviceSize d
         .bufferRowLength = 0,
         .bufferImageHeight = 0,
         .imageSubresource = vk::ImageSubresourceLayers{
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
+            .aspectMask = aspectFlags,
             .mipLevel = 0,
             .baseArrayLayer = 0,
             .layerCount = 1
@@ -96,35 +102,39 @@ void DeviceLocalImage::transitionImageLayout(const vk::ImageLayout newLayout)
     vk::AccessFlags dstAccessMask;
     vk::PipelineStageFlags srcStageMask;
     vk::PipelineStageFlags dstStageMask;
+    vk::ImageAspectFlags aspectMask;
 
-    if (currentLayout == vk::ImageLayout::eUndefined and newLayout == vk::ImageLayout::eTransferDstOptimal)
+    switch (currentLayout)
     {
-
-        srcAccessMask = {};
-        dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-        srcStageMask = vk::PipelineStageFlagBits::eTopOfPipe;
-        dstStageMask = vk::PipelineStageFlagBits::eTransfer;
+        case vk::ImageLayout::eUndefined:
+            srcAccessMask = {};
+            srcStageMask = vk::PipelineStageFlagBits::eTopOfPipe;
+            break;
+        case vk::ImageLayout::eTransferDstOptimal:
+            srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+            srcStageMask = vk::PipelineStageFlagBits::eTransfer;
+            break;
+        default: throw std::invalid_argument("Unsupported layout transition.");
     }
-    else if (currentLayout == vk::ImageLayout::eUndefined and newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
-    {
-        srcAccessMask = {};
-        dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-        srcStageMask = vk::PipelineStageFlagBits::eTopOfPipe;
-        dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
-    }
-    else if (currentLayout == vk::ImageLayout::eTransferDstOptimal and newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+    switch (newLayout)
     {
-        srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-        srcStageMask = vk::PipelineStageFlagBits::eTransfer;
-        dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
-    }
-    else
-    {
-        throw std::invalid_argument("Unsupported layout transition.");
+        case vk::ImageLayout::eTransferDstOptimal:
+            dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+            dstStageMask = vk::PipelineStageFlagBits::eTransfer;
+            aspectMask = vk::ImageAspectFlagBits::eColor;
+            break;
+        case vk::ImageLayout::eShaderReadOnlyOptimal:
+            dstAccessMask = vk::AccessFlagBits::eShaderRead;
+            dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+            aspectMask = vk::ImageAspectFlagBits::eColor;
+            break;
+        case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+            dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+            dstStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests;
+            aspectMask = hasStencilComponent(format) ? vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil : vk::ImageAspectFlagBits::eDepth;
+            break;
+        default: throw std::invalid_argument("Unsupported layout transition.");
     }
 
     const vk::ImageMemoryBarrier barrier{
@@ -134,7 +144,7 @@ void DeviceLocalImage::transitionImageLayout(const vk::ImageLayout newLayout)
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = *image,
         .subresourceRange = vk::ImageSubresourceRange{
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
+            .aspectMask = aspectMask,
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
@@ -148,6 +158,7 @@ void DeviceLocalImage::transitionImageLayout(const vk::ImageLayout newLayout)
     commandBuffer.pipelineBarrier(srcStageMask, dstStageMask, {}, nullptr, nullptr, barrier);
     environment.get().submitSingleTimeCommands(commandBuffer);
 
+    aspectFlags = aspectMask;
     currentLayout = newLayout;
 }
 
@@ -200,7 +211,7 @@ vk::raii::ImageView DeviceLocalImage::createImageView(const vk::Format format) c
             .a = vk::ComponentSwizzle::eIdentity
         },
         .subresourceRange = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
+            .aspectMask = aspectFlags,
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
@@ -209,4 +220,9 @@ vk::raii::ImageView DeviceLocalImage::createImageView(const vk::Format format) c
     };
 
     return environment.get().device.createImageView(createInfo);
+}
+
+bool DeviceLocalImage::hasStencilComponent(const vk::Format format)
+{
+    return format == vk::Format::eD32SfloatS8Uint or format == vk::Format::eD24UnormS8Uint;
 }

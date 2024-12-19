@@ -43,14 +43,20 @@ private:
 
     static constexpr uint32_t MaxFramesInFlight = 2;
 
-    static constexpr std::array<Vertex, 4> vertices = {
-        Vertex{ { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-        Vertex{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-        Vertex{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-        Vertex{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } }
+    static constexpr std::array<Vertex, 8> vertices = {
+        Vertex{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        Vertex{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+        Vertex{ { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+        Vertex{ { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+
+        Vertex{ { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        Vertex{ { 0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+        Vertex{ { 0.5f, 0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+        Vertex{ { -0.5f, 0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } }
     };
-    static constexpr std::array<uint16_t, 6> indices = {
-        0, 1, 2, 2, 3, 0
+    static constexpr std::array<uint16_t, 12> indices = {
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4
     };
 
     Window window;
@@ -61,6 +67,7 @@ private:
     std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
     DeviceLocalImage textureImage;
     vk::raii::Sampler textureSampler;
+    DeviceLocalImage depthImage;
     std::vector<vk::raii::DescriptorSet> descriptorSets;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
@@ -76,6 +83,7 @@ private:
     static std::vector<std::unique_ptr<IBuffer>> createUniformBuffers(const Environment& environment, const uint32_t count);
     static DeviceLocalImage createTextureImage(const Environment& environment);
     static vk::raii::Sampler createTextureSampler(const Environment& environment);
+    static std::vector<vk::raii::Framebuffer> createSwapchainFramebuffers(const Environment& environment, const vk::raii::RenderPass& renderPass, const vk::raii::ImageView& depthImageView);
     static std::vector<SyncObjects> createSyncObjects(const Environment& environment, const uint32_t count);
 };
 

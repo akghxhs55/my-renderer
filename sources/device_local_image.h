@@ -12,6 +12,8 @@ class DeviceLocalImage {
 private:
     std::reference_wrapper<const Environment> environment;
     vk::Extent2D extent;
+    vk::Format format;
+    vk::ImageAspectFlags aspectFlags;
     vk::DeviceSize size;
     vk::ImageLayout currentLayout;
     vk::raii::Image image;
@@ -20,7 +22,7 @@ public:
     vk::raii::ImageView imageView;
 
 public:
-    DeviceLocalImage(const Environment& environment, const vk::Extent2D extent, const vk::Format format, const vk::ImageUsageFlags usage);
+    DeviceLocalImage(const Environment& environment, const vk::Extent2D extent, const vk::Format format, const vk::ImageUsageFlags usage, const vk::ImageAspectFlags aspectFlags);
     ~DeviceLocalImage();
 
     DeviceLocalImage(const DeviceLocalImage&) = delete;
@@ -37,6 +39,8 @@ private:
     vk::raii::Image createImage(const vk::Extent2D extent, const vk::Format format, const vk::ImageUsageFlags usage) const;
     vk::raii::DeviceMemory allocateImageMemory(const vk::MemoryPropertyFlags properties) const;
     vk::raii::ImageView createImageView(const vk::Format format) const;
+
+    static bool hasStencilComponent(vk::Format format);
 };
 
 
