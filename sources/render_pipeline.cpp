@@ -123,14 +123,14 @@ vk::raii::RenderPass RenderPipeline::createRenderPass(const Environment& environ
 
 vk::raii::Pipeline RenderPipeline::createGraphicsPipeline(const Environment& environment) const
 {
-    const vk::raii::ShaderModule vertexShaderModule = createShaderModule(environment.device, readFile("../shaders/vertex.spv"));
+    const vk::raii::ShaderModule vertexShaderModule = createShaderModule(environment.device, readFile(ShaderPath + VertexShaderFilename));
     const vk::PipelineShaderStageCreateInfo vertexShaderStageCreateInfo{
         .stage = vk::ShaderStageFlagBits::eVertex,
         .module = *vertexShaderModule,
         .pName = "main"
     };
 
-    const vk::raii::ShaderModule fragmentShaderModule = createShaderModule(environment.device, readFile("../shaders/fragment.spv"));
+    const vk::raii::ShaderModule fragmentShaderModule = createShaderModule(environment.device, readFile(ShaderPath + FragmentShaderFilename));
     const vk::PipelineShaderStageCreateInfo fragmentShaderStageCreateInfo{
         .stage = vk::ShaderStageFlagBits::eFragment,
         .module = *fragmentShaderModule,

@@ -6,6 +6,12 @@
 
 
 class RenderPipeline {
+private:
+    static constexpr std::string ShaderPath = "../shaders/";
+
+    static constexpr std::string VertexShaderFilename = "vertex.spv";
+    static constexpr std::string FragmentShaderFilename = "fragment.spv";
+
 public:
     const vk::raii::DescriptorSetLayout descriptorSetLayout;
     const vk::raii::PipelineLayout pipelineLayout;

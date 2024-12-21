@@ -287,7 +287,7 @@ std::vector<vk::raii::Framebuffer> MyRenderer::createSwapchainFramebuffers(const
     const vk::raii::RenderPass& renderPass, const vk::raii::ImageView& depthImageView)
 {
     const auto& swapchainImageViews = environment.getSwapchainImageViews();
-    const auto& swapchainExtent = environment.getSwapchainExtent();
+    const auto& [width, height] = environment.getSwapchainExtent();
 
     std::vector<vk::raii::Framebuffer> framebuffers;
     framebuffers.reserve(swapchainImageViews.size());
@@ -299,8 +299,8 @@ std::vector<vk::raii::Framebuffer> MyRenderer::createSwapchainFramebuffers(const
             .renderPass = *renderPass,
             .attachmentCount = static_cast<uint32_t>(attachments.size()),
             .pAttachments = attachments.data(),
-            .width = swapchainExtent.width,
-            .height = swapchainExtent.height,
+            .width = width,
+            .height = height,
             .layers = 1
         };
 

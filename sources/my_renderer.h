@@ -26,14 +26,7 @@ private:
         alignas(16) glm::mat4 view;
         alignas(16) glm::mat4 projection;
     };
-
-public:
-    MyRenderer();
-    ~MyRenderer();
-
-    void run();
-
-private:
+    
     static constexpr auto WindowTitle = "My Renderer";
     static constexpr int WindowWidth = 800;
     static constexpr int WindowHeight = 600;
@@ -73,6 +66,12 @@ private:
     std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;
     std::vector<SyncObjects> syncObjects;
     uint32_t currentFrame;
+
+public:
+    MyRenderer();
+    ~MyRenderer();
+
+    void run();
 
     void update() const;
     void drawFrame();
