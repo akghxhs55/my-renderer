@@ -6,11 +6,11 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "vertex.h"
-#include "window.h"
-#include "environment.h"
-#include "render_pipeline.h"
-#include "i_buffer.h"
-#include "device_local_image.h"
+#include "utils/window.h"
+#include "utils/environment.h"
+#include "utils/render_pipeline.h"
+#include "utils/i_buffer.h"
+#include "utils/device_local_image.h"
 
 
 class MyRenderer {
@@ -42,7 +42,7 @@ private:
     static constexpr std::string ModelPath = "../models/";
     static constexpr std::string TexturePath = "../textures/";
 
-    static constexpr std::string ModelFileName = "viking_room.obj";
+    static constexpr std::string ModelFileName = "buddha.obj";
     static constexpr std::string TextureFileName = "viking_room.png";
 
     static constexpr uint32_t MaxFramesInFlight = 2;

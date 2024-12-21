@@ -12,8 +12,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-#include "device_local_buffer.h"
-#include "host_visible_buffer.h"
+#include "utils/device_local_buffer.h"
+#include "utils/host_visible_buffer.h"
 
 #include <chrono>
 #include <unordered_map>

@@ -98,7 +98,7 @@ public:
 
 private:
     static constexpr auto EngineName = "No Engine";
-    static constexpr uint32_t EngineVersion = vk::makeApiVersion(0, 0, 0, 0);
+    static constexpr uint32_t EngineVersion = vk::makeApiVersion(0, 1, 0, 0);
 #ifdef NDEBUG
     static constexpr bool enabledDebug = false;
 #else

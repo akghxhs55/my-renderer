@@ -1,7 +1,7 @@
 #include "render_pipeline.h"
 
 
-#include "vertex.h"
+#include "../vertex.h"
 
 #include <fstream>
 

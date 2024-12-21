@@ -5,15 +5,15 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_executable(my_renderer sources/main.cpp
         sources/my_renderer.cpp sources/my_renderer.h
-        sources/window.cpp sources/window.h
-        sources/environment.cpp sources/environment.h
-        sources/render_pipeline.cpp sources/render_pipeline.h
-        sources/i_buffer.h
-        sources/abstract_buffer.cpp sources/abstract_buffer.h
-        sources/device_local_buffer.cpp sources/device_local_buffer.h
-        sources/host_visible_buffer.cpp sources/host_visible_buffer.h
+        sources/utils/window.cpp sources/utils/window.h
+        sources/utils/environment.cpp sources/utils/environment.h
+        sources/utils/render_pipeline.cpp sources/utils/render_pipeline.h
+        sources/utils/i_buffer.h
+        sources/utils/abstract_buffer.cpp sources/utils/abstract_buffer.h
+        sources/utils/device_local_buffer.cpp sources/utils/device_local_buffer.h
+        sources/utils/host_visible_buffer.cpp sources/utils/host_visible_buffer.h
         sources/vertex.cpp sources/vertex.h
-        sources/device_local_image.cpp sources/device_local_image.h
+        sources/utils/device_local_image.cpp sources/utils/device_local_image.h
 )
 
 find_package(VulkanLoader REQUIRED)
