@@ -42,8 +42,8 @@ private:
     static constexpr std::string ModelPath = "../models/";
     static constexpr std::string TexturePath = "../textures/";
 
-    static constexpr std::string ModelFileName = "buddha.obj";
-    static constexpr std::string TextureFileName = "viking_room.png";
+    static constexpr std::string ModelFileName = "erato.obj";
+    static constexpr std::string TextureFileName = "erato-101.jpg";
 
     static constexpr uint32_t MaxFramesInFlight = 2;
 

@@ -1,3 +1,11 @@
+<div style="margin: 0 auto; width: 75%">
+
+![Demo Image](images/demo.png)
+
+</div>
+
+# TODOs
+
 - [x] Setup Vulkan
 - [x] Implement Drawing
 - [x] Implement Vertex Buffer and Index Buffer
