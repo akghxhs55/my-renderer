@@ -5,12 +5,12 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
+#include "vertex.h"
 #include "window.h"
 #include "environment.h"
+#include "render_pipeline.h"
 #include "i_buffer.h"
 #include "device_local_image.h"
-#include "render_pipeline.h"
-#include "vertex.h"
 
 
 class MyRenderer {
@@ -47,16 +47,16 @@ private:
 
     static constexpr uint32_t MaxFramesInFlight = 2;
 
+    Model model;
     Window window;
     Environment environment;
     RenderPipeline renderPipeline;
-    Model model;
+    DeviceLocalImage depthImage;
     std::unique_ptr<IBuffer> vertexBuffer;
     std::unique_ptr<IBuffer> indexBuffer;
     std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
     DeviceLocalImage textureImage;
     vk::raii::Sampler textureSampler;
-    DeviceLocalImage depthImage;
     std::vector<vk::raii::DescriptorSet> descriptorSets;
     std::vector<vk::raii::Framebuffer> swapchainFramebuffers;
     std::vector<vk::raii::CommandBuffer> graphicsCommandBuffers;

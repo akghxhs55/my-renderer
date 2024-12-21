@@ -20,16 +20,16 @@
 
 
 MyRenderer::MyRenderer() :
+    model(loadModel(ModelPath + ModelFileName)),
     window(WindowTitle, WindowWidth, WindowHeight),
     environment(window, ApplicationName, ApplicationVersion, MaxFramesInFlight),
     renderPipeline(environment),
-    model(loadModel(ModelPath + ModelFileName)),
+    depthImage(environment, environment.getSwapchainExtent(), environment.depthFormat, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth),
     vertexBuffer(std::make_unique<DeviceLocalBuffer>(environment, Vertex::Size * model.vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)),
     indexBuffer(std::make_unique<DeviceLocalBuffer>(environment, sizeof(uint32_t) * model.indices.size(), vk::BufferUsageFlagBits::eIndexBuffer)),
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
     textureImage(createTextureImage(environment)),
     textureSampler(createTextureSampler(environment)),
-    depthImage(environment, environment.getSwapchainExtent(), environment.depthFormat, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth),
     descriptorSets(environment.createDescriptorSets(MaxFramesInFlight, renderPipeline.descriptorSetLayout)),
     swapchainFramebuffers(createSwapchainFramebuffers(environment, renderPipeline.renderPass, depthImage.imageView)),
     graphicsCommandBuffers(environment.createGraphicsCommandBuffers(MaxFramesInFlight)),
