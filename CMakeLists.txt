@@ -27,3 +27,6 @@ target_link_libraries(my_renderer glm::glm)
 
 find_package(stb REQUIRED)
 target_link_libraries(my_renderer stb::stb)
+
+find_package(tinyobjloader REQUIRED)
+target_link_libraries(my_renderer tinyobjloader::tinyobjloader)

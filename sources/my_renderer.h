@@ -26,7 +26,12 @@ private:
         alignas(16) glm::mat4 view;
         alignas(16) glm::mat4 projection;
     };
-    
+    struct Model
+    {
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+    };
+
     static constexpr auto WindowTitle = "My Renderer";
     static constexpr int WindowWidth = 800;
     static constexpr int WindowHeight = 600;
@@ -34,27 +39,18 @@ private:
     static constexpr auto ApplicationName = "My Renderer";
     static constexpr uint32_t ApplicationVersion = vk::makeApiVersion(0, 0, 0, 0);
 
+    static constexpr std::string ModelPath = "../models/";
+    static constexpr std::string TexturePath = "../textures/";
+
+    static constexpr std::string ModelFileName = "viking_room.obj";
+    static constexpr std::string TextureFileName = "viking_room.png";
+
     static constexpr uint32_t MaxFramesInFlight = 2;
-
-    static constexpr std::array<Vertex, 8> vertices = {
-        Vertex{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-        Vertex{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-        Vertex{ { 0.5f, 0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-        Vertex{ { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-
-        Vertex{ { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-        Vertex{ { 0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-        Vertex{ { 0.5f, 0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-        Vertex{ { -0.5f, 0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } }
-    };
-    static constexpr std::array<uint16_t, 12> indices = {
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4
-    };
 
     Window window;
     Environment environment;
     RenderPipeline renderPipeline;
+    Model model;
     std::unique_ptr<IBuffer> vertexBuffer;
     std::unique_ptr<IBuffer> indexBuffer;
     std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
@@ -79,6 +75,7 @@ public:
     void recordRenderCommand(const vk::CommandBuffer& commandBuffer, const uint32_t imageIndex) const;
     void recreateSwapchain();
 
+    static Model loadModel(const std::string& path);
     static std::vector<std::unique_ptr<IBuffer>> createUniformBuffers(const Environment& environment, const uint32_t count);
     static DeviceLocalImage createTextureImage(const Environment& environment);
     static vk::raii::Sampler createTextureSampler(const Environment& environment);

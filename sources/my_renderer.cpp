@@ -9,6 +9,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 #include "device_local_buffer.h"
 #include "host_visible_buffer.h"
 
@@ -19,8 +22,9 @@ MyRenderer::MyRenderer() :
     window(WindowTitle, WindowWidth, WindowHeight),
     environment(window, ApplicationName, ApplicationVersion, MaxFramesInFlight),
     renderPipeline(environment),
-    vertexBuffer(std::make_unique<DeviceLocalBuffer>(environment, Vertex::Size * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)),
-    indexBuffer(std::make_unique<DeviceLocalBuffer>(environment, sizeof(indices), vk::BufferUsageFlagBits::eIndexBuffer)),
+    model(loadModel(ModelPath + ModelFileName)),
+    vertexBuffer(std::make_unique<DeviceLocalBuffer>(environment, Vertex::Size * model.vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)),
+    indexBuffer(std::make_unique<DeviceLocalBuffer>(environment, sizeof(uint32_t) * model.indices.size(), vk::BufferUsageFlagBits::eIndexBuffer)),
     uniformBuffers(createUniformBuffers(environment, MaxFramesInFlight)),
     textureImage(createTextureImage(environment)),
     textureSampler(createTextureSampler(environment)),
@@ -31,8 +35,8 @@ MyRenderer::MyRenderer() :
     syncObjects(createSyncObjects(environment, MaxFramesInFlight)),
     currentFrame(0)
 {
-    vertexBuffer->uploadData(vertices.data(), Vertex::Size * vertices.size());
-    indexBuffer->uploadData(indices.data(), sizeof(indices));
+    vertexBuffer->uploadData(model.vertices.data(), Vertex::Size * model.vertices.size());
+    indexBuffer->uploadData(model.indices.data(), sizeof(uint32_t) * model.indices.size());
 
     for (uint32_t i = 0; i < MaxFramesInFlight; ++i)
     {
@@ -202,10 +206,10 @@ void MyRenderer::recordRenderCommand(const vk::CommandBuffer& commandBuffer, con
     commandBuffer.setScissor(0, environment.getScissor());
 
     commandBuffer.bindVertexBuffers(0, *vertexBuffer->getBuffer(), { 0 });
-    commandBuffer.bindIndexBuffer(*indexBuffer->getBuffer(), 0, vk::IndexType::eUint16);
+    commandBuffer.bindIndexBuffer(*indexBuffer->getBuffer(), 0, vk::IndexType::eUint32);
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *renderPipeline.pipelineLayout, 0, *descriptorSets[currentFrame], nullptr);
 
-    commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
+    commandBuffer.drawIndexed(model.indices.size(), 1, 0, 0, 0);
 
     commandBuffer.endRenderPass();
 
@@ -228,6 +232,44 @@ void MyRenderer::recreateSwapchain()
     swapchainFramebuffers = createSwapchainFramebuffers(environment, renderPipeline.renderPass, depthImage.imageView);
 }
 
+MyRenderer::Model MyRenderer::loadModel(const std::string& path)
+{
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    Model model;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str()))
+    {
+        throw std::runtime_error(warn + err);
+    }
+
+    for (const auto& shape : shapes)
+    {
+        for (const auto& index : shape.mesh.indices)
+        {
+            model.vertices.push_back({
+                .pos = {
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]
+                },
+                .texCoord = {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                },
+                .color = { 1.0f, 1.0f, 1.0f }
+            });
+
+            model.indices.push_back(model.indices.size());
+        }
+    }
+
+    return model;
+}
+
 std::vector<std::unique_ptr<IBuffer>> MyRenderer::createUniformBuffers(const Environment& environment, const uint32_t count)
 {
     std::vector<std::unique_ptr<IBuffer>> uniformBuffers;
@@ -243,7 +285,7 @@ std::vector<std::unique_ptr<IBuffer>> MyRenderer::createUniformBuffers(const Env
 DeviceLocalImage MyRenderer::createTextureImage(const Environment& environment)
 {
     int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("../textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load((TexturePath + TextureFileName).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     const vk::DeviceSize imageSize = texWidth * texHeight * 4;
 
     if (!pixels)
