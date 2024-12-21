@@ -8,12 +8,12 @@ add_executable(my_renderer sources/main.cpp
         sources/window.cpp sources/window.h
         sources/environment.cpp sources/environment.h
         sources/render_pipeline.cpp sources/render_pipeline.h
+        sources/i_buffer.h
         sources/abstract_buffer.cpp sources/abstract_buffer.h
         sources/device_local_buffer.cpp sources/device_local_buffer.h
         sources/host_visible_buffer.cpp sources/host_visible_buffer.h
         sources/vertex.cpp sources/vertex.h
         sources/device_local_image.cpp sources/device_local_image.h
-        sources/i_buffer.h
 )
 
 find_package(VulkanLoader REQUIRED)

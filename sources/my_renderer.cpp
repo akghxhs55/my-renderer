@@ -16,6 +16,7 @@
 #include "host_visible_buffer.h"
 
 #include <chrono>
+#include <unordered_map>
 
 
 MyRenderer::MyRenderer() :
@@ -246,11 +247,12 @@ MyRenderer::Model MyRenderer::loadModel(const std::string& path)
         throw std::runtime_error(warn + err);
     }
 
+    std::unordered_map<Vertex, uint32_t> uniqueVertices;
     for (const auto& shape : shapes)
     {
         for (const auto& index : shape.mesh.indices)
         {
-            model.vertices.push_back({
+            const Vertex vertex = {
                 .pos = {
                     attrib.vertices[3 * index.vertex_index + 0],
                     attrib.vertices[3 * index.vertex_index + 1],
@@ -261,9 +263,14 @@ MyRenderer::Model MyRenderer::loadModel(const std::string& path)
                     1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
                 },
                 .color = { 1.0f, 1.0f, 1.0f }
-            });
+            };
+            if (!uniqueVertices.contains(vertex))
+            {
+                uniqueVertices[vertex] = model.vertices.size();
+                model.vertices.push_back(vertex);
+            }
 
-            model.indices.push_back(model.indices.size());
+            model.indices.push_back(uniqueVertices[vertex]);
         }
     }
 
